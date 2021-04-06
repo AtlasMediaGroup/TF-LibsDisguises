@@ -223,6 +223,7 @@ public enum LibsMsg {
     SKIN_API_IN_USE(ChatColor.RED + "mineskin.org is currently in use, please try again"),
     SKIN_API_TIMER(ChatColor.RED + "mineskin.org can be used again in %s seconds"),
     SKIN_API_FAIL(ChatColor.RED + "Unexpected error while accessing mineskin.org, please try again"),
+    SKIN_API_FAIL_TOO_FAST(ChatColor.RED + "Too many requests accessing mineskin.org, please slow down!"),
     SKIN_API_BAD_URL(ChatColor.RED + "Invalid url provided! Please ensure it is a .png file download!"),
     SKIN_API_FAILED_URL(ChatColor.RED + "Invalid url provided! mineskin.org failed to grab it!"),
     SKIN_API_FAIL_CODE(ChatColor.RED + "Error %s! %s"),
@@ -358,7 +359,7 @@ public enum LibsMsg {
     LD_COMMAND_DEBUG(ChatColor.BLUE + "/libsdisguises debug - " + ChatColor.AQUA +
             "Used to help debug scoreboard issues on a player disguise"),
     LD_COMMAND_UPLOAD_LOGS(ChatColor.BLUE + "/libsdisguises uploadlogs - " + ChatColor.AQUA +
-            "Uploads latest.log, disguises.yml and config.yml and gives you the link to share. Used when seeking " +
+            "Uploads latest.log, disguises.yml and configs and gives you the link to share. Used when seeking " +
             "assistance."),
     SELF_DISGUISE_HIDDEN(ChatColor.GREEN + "Self disguise hidden as it's too tall..");
 

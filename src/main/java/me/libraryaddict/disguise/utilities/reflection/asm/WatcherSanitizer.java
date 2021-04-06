@@ -7,17 +7,12 @@ import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPluginLoader;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Created by libraryaddict on 17/02/2020.
@@ -40,10 +35,9 @@ public class WatcherSanitizer {
             PluginDescriptionFile desc = (PluginDescriptionFile) dF.get(loader);
 
             if (hasWatcher(lClasses)) {
-                LibsDisguises.getInstance().getLogger().severe(desc.getFullName() +
-                        " has been a naughty plugin, they're declaring access to the disguise watchers before Lib's " +
-                        "Disguises can properly load them! They should add 'LibsDisguises' to the 'depend' section of" +
-                        " their plugin.yml!");
+                LibsDisguises.getInstance().getLogger()
+                        .severe(desc.getFullName() + " has been a naughty plugin, they're declaring access to the disguise watchers before Lib's " +
+                                "Disguises can properly load them! They should add 'LibsDisguises' to the 'depend' section of" + " their plugin.yml!");
                 break;
             }
         }
@@ -54,8 +48,7 @@ public class WatcherSanitizer {
 
         if (hasWatcher(classes)) {
             LibsDisguises.getInstance().getLogger()
-                    .severe("Somehow the main server has a Watcher instance! Hopefully there was a plugin mentioned " +
-                            "above! This is a bug!");
+                    .severe("Somehow the main server has a Watcher instance! Hopefully there was a plugin mentioned " + "above! This is a bug!");
         }
     }
 
@@ -82,17 +75,8 @@ public class WatcherSanitizer {
         ArrayList<String> mapped = new ArrayList<>();
 
         try (InputStream stream = LibsDisguises.getInstance().getResource("ANTI_PIRACY_ENCRYPTION")) {
-            IAsm asm;
-
-            if (NmsVersion.v1_14.isSupported()) {
-                asm = new Asm14();
-            } else {
-                if (!NmsVersion.v1_13.isSupported()) {
-                    new AsmDownloader();
-                }
-
-                asm = new Asm13();
-            }
+            new AsmDownloader();
+            IAsm asm = new Asm13();
 
             String[] lines = new String(ReflectionManager.readFully(stream), StandardCharsets.UTF_8).split("\n");
 
@@ -105,8 +89,7 @@ public class WatcherSanitizer {
                     continue;
                 }
 
-                String path = "me.libraryaddict.disguise.disguisetypes." +
-                        (info.getWatcher().equals("FlagWatcher") ? "" : "watchers.") + info.getWatcher();
+                String path = "me.libraryaddict.disguise.disguisetypes." + (info.getWatcher().equals("FlagWatcher") ? "" : "watchers.") + info.getWatcher();
 
                 toRemove.putIfAbsent(path, new ArrayList<>());
 

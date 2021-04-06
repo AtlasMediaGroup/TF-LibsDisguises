@@ -5,11 +5,13 @@ import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.utilities.plugin.BisectHosting;
 import me.libraryaddict.disguise.utilities.plugin.PluginInformation;
 import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
-import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.util.FileUtil;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -297,7 +299,7 @@ public class LibsPremium {
                     pluginBuildDate = config.getString("build-date");
                 }
             }
-            catch (InvalidConfigurationException | IOException ex) {
+            catch (Exception ex) {
                 ex.printStackTrace();
             }
 

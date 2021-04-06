@@ -15,6 +15,7 @@ import lombok.Getter;
 import me.libraryaddict.disguise.DisguiseAPI;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
+import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.LibsPremium;
 import me.libraryaddict.disguise.utilities.parser.RandomDefaultValue;
@@ -195,6 +196,9 @@ public class FlagWatcher {
         cloned.upsideDown = upsideDown;
         cloned.sleeping = sleeping;
         cloned.glowColor = glowColor;
+        cloned.pitchLock = pitchLock;
+        cloned.yawLock = yawLock;
+        cloned.yModifier = yModifier;
 
         return cloned;
     }
@@ -250,14 +254,19 @@ public class FlagWatcher {
         }
     }
 
-    public List<WrappedWatchableObject> convert(List<WrappedWatchableObject> list) {
+    public List<WrappedWatchableObject> convert(Player player, List<WrappedWatchableObject> list) {
         List<WrappedWatchableObject> newList = new ArrayList<>();
         HashSet<Integer> sentValues = new HashSet<>();
         boolean sendAllCustom = false;
 
         for (WrappedWatchableObject watch : list) {
             int id = watch.getIndex();
+            MetaIndex index = MetaIndex.getMetaIndex(this, id);
             sentValues.add(id);
+
+            if (index == null) {
+                continue;
+            }
 
             // Its sending the air metadata. This is the least commonly sent metadata which all entitys still share.
             // I send my custom values if I see this!
@@ -290,7 +299,7 @@ public class FlagWatcher {
 
                 boolean isDirty = watch.getDirtyState();
 
-                watch = ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, id), value);
+                watch = ReflectionManager.createWatchable(index, value);
 
                 if (watch == null) {
                     continue;
@@ -302,7 +311,7 @@ public class FlagWatcher {
             } else {
                 boolean isDirty = watch.getDirtyState();
 
-                watch = ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, id), watch.getRawValue());
+                watch = ReflectionManager.createWatchable(index, watch.getRawValue());
 
                 if (watch == null) {
                     continue;
@@ -318,6 +327,15 @@ public class FlagWatcher {
             }
 
             newList.add(watch);
+
+            if (!sendAllCustom && getDisguise().isPlayerDisguise() && index == MetaIndex.LIVING_HEALTH) {
+                float health = ((Number) watch.getRawValue()).floatValue();
+
+                String name = DisguiseConfig.isScoreboardNames() && ((PlayerDisguise) getDisguise()).hasScoreboardName() ?
+                        ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
+
+                ReflectionManager.setScore(player.getScoreboard(), ReflectionManager.scoreboardCrtieriaHealth, name, (int) Math.ceil(health));
+            }
         }
 
         if (sendAllCustom) {
@@ -341,7 +359,25 @@ public class FlagWatcher {
 
                 newList.add(watch);
             }
+
+            if (getDisguise().isPlayerDisguise()) {
+                float health;
+
+                if (hasValue(MetaIndex.LIVING_HEALTH)) {
+                    health = ((LivingWatcher) this).getHealth();
+                } else if (getDisguise().getEntity() instanceof LivingEntity) {
+                    health = (float) ((LivingEntity) getDisguise().getEntity()).getHealth();
+                } else {
+                    health = MetaIndex.LIVING_HEALTH.getDefault();
+                }
+
+                String name = DisguiseConfig.isScoreboardNames() && ((PlayerDisguise) getDisguise()).hasScoreboardName() ?
+                        ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
+
+                ReflectionManager.setScore(player.getScoreboard(), ReflectionManager.scoreboardCrtieriaHealth, name, (int) Math.ceil(health));
+            }
         }
+
         // Here we check for if there is a health packet that says they died.
         if (getDisguise().isSelfDisguiseVisible() && getDisguise().getEntity() != null && getDisguise().getEntity() instanceof Player) {
             for (WrappedWatchableObject watch : newList) {
@@ -446,6 +482,10 @@ public class FlagWatcher {
 
         try {
             for (Player player : DisguiseUtilities.getPerverts(getDisguise())) {
+                if (getDisguise().isPlayerDisguise() && LibsDisguises.getInstance().getSkinHandler().isSleeping(player, (PlayerDisguise) getDisguise())) {
+                    continue;
+                }
+
                 for (PacketContainer packet : packets) {
                     ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
                 }

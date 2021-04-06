@@ -4,9 +4,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
-import me.libraryaddict.disguise.disguisetypes.TargetedDisguise;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.LibsPremium;
+import me.libraryaddict.disguise.utilities.config.ConfigLoader;
 import me.libraryaddict.disguise.utilities.modded.ModdedEntity;
 import me.libraryaddict.disguise.utilities.modded.ModdedManager;
 import me.libraryaddict.disguise.utilities.packets.PacketsManager;
@@ -17,20 +17,15 @@ import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
 import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import me.libraryaddict.disguise.utilities.translations.TranslateType;
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.scheduler.BukkitTask;
@@ -63,12 +58,6 @@ public class DisguiseConfig {
     @Getter
     @Setter
     private static boolean collectPacketsEnabled;
-    /**
-     * No setter provided as this cannot be changed after startup
-     */
-    @Setter(value = AccessLevel.PRIVATE)
-    @Getter
-    private static boolean disableCommands;
     @Getter
     @Setter
     private static boolean disableFriendlyInvisibles;
@@ -197,9 +186,6 @@ public class DisguiseConfig {
     private static int maxClonedDisguises;
     @Getter
     @Setter
-    private static int playerDisguisesTablistExpires;
-    @Getter
-    @Setter
     private static int uuidGeneratedVersion;
     @Getter
     @Setter
@@ -271,6 +257,21 @@ public class DisguiseConfig {
     @Getter
     @Setter
     private static boolean viewSelfDisguisesDefault;
+    @Getter
+    @Setter
+    private static String lastGithubUpdateETag;
+    @Getter
+    @Setter
+    private static String lastPluginUpdateVersion;
+    @Getter
+    @Setter
+    private static boolean contactMojangServers;
+    @Getter
+    @Setter(AccessLevel.PROTECTED)
+    private static int disguiseRadiusMax;
+    @Getter
+    @Setter
+    private static String data;
 
     public static boolean isArmorstandsName() {
         return getPlayerNameType() == PlayerNameType.ARMORSTANDS;
@@ -308,28 +309,11 @@ public class DisguiseConfig {
     }
 
     private static void doUpdaterTask() {
-        boolean startTask = isAutoUpdate() || isNotifyUpdate() || "1592".equals(
-                (LibsPremium.getPaidInformation() == null ? LibsPremium.getPluginInformation() :
-                        LibsPremium.getPaidInformation()).getUserID());
+        boolean startTask = isAutoUpdate() || isNotifyUpdate() ||
+                "1592".equals((LibsPremium.getPaidInformation() == null ? LibsPremium.getPluginInformation() : LibsPremium.getPaidInformation()).getUserID());
 
         // Don't ever run the auto updater on a custom build..
         if (!LibsDisguises.getInstance().isNumberedBuild()) {
-            return;
-        }
-
-        if (!LibsDisguises.getInstance().getConfig().getDefaults().getBoolean("AutoUpdate")) {
-            updaterTask = Bukkit.getScheduler().runTaskTimer(LibsDisguises.getInstance(), new Runnable() {
-                @Override
-                public void run() {
-                    for (Set<TargetedDisguise> disguises : DisguiseUtilities.getDisguises().values()) {
-                        for (Disguise disguise : disguises) {
-                            disguise.getWatcher().setSprinting(true);
-                            disguise.getWatcher().setHelmet(new ItemStack(Material.LEATHER_HELMET));
-                        }
-                    }
-                }
-            }, TimeUnit.HOURS.toSeconds(1) * 20, (20 * TimeUnit.MINUTES.toSeconds(10)));
-
             return;
         }
 
@@ -343,7 +327,7 @@ public class DisguiseConfig {
             return;
         }
 
-        int timer = (int) (TimeUnit.HOURS.toSeconds(isHittingRateLimit() ? 36 : 6) * 20);
+        int timer = (int) (TimeUnit.HOURS.toSeconds(isHittingRateLimit() ? 36 : 12) * 20);
 
         // Get the ticks since last update
         long timeSinceLast = (System.currentTimeMillis() - getLastUpdateRequest()) / 50;
@@ -402,9 +386,11 @@ public class DisguiseConfig {
         usingReleaseBuild = configuration.getBoolean("ReleaseBuild", isUsingReleaseBuild());
         lastUpdateRequest = configuration.getLong("LastUpdateRequest", 0L);
         hittingRateLimit = configuration.getBoolean("HittingRateLimit", false);
+        lastGithubUpdateETag = configuration.getString("LastGithubETag", null);
+        lastPluginUpdateVersion = configuration.getString("LastPluginVersion", null);
+        data = configuration.getString("Data", null);
 
-        if (!configuration.contains("Bisect-Hosted") || !configuration.contains("Server-IP") ||
-                !configuration.contains("ReleaseBuild")) {
+        if (!configuration.contains("Bisect-Hosted") || !configuration.contains("Server-IP") || !configuration.contains("ReleaseBuild")) {
             saveInternalConfig();
         }
     }
@@ -412,12 +398,11 @@ public class DisguiseConfig {
     public static void saveInternalConfig() {
         File internalFile = new File(LibsDisguises.getInstance().getDataFolder(), "internal.yml");
 
-        String internalConfig =
-                ReflectionManager.getResourceAsString(LibsDisguises.getInstance().getFile(), "internal.yml");
+        String internalConfig = ReflectionManager.getResourceAsString(LibsDisguises.getInstance().getFile(), "internal.yml");
 
         // Bisect hosted, server ip, release builds
-        for (Object s : new Object[]{isBisectHosted(), getSavedServerIp(), isUsingReleaseBuild(),
-                getLastUpdateRequest(), isHittingRateLimit()}) {
+        for (Object s : new Object[]{isBisectHosted(), getSavedServerIp(), isUsingReleaseBuild(), getLastUpdateRequest(), isHittingRateLimit(),
+                getLastGithubUpdateETag(), getLastPluginUpdateVersion(), getData()}) {
             internalConfig = internalConfig.replaceFirst("%data%", "" + s);
         }
 
@@ -500,8 +485,7 @@ public class DisguiseConfig {
             return null;
         }
 
-        return new HashMap.SimpleEntry(entry.getKey(),
-                DisguiseParser.parseDisguise(Bukkit.getConsoleSender(), target, entry.getValue()));
+        return new HashMap.SimpleEntry(entry.getKey(), DisguiseParser.parseDisguise(Bukkit.getConsoleSender(), target, entry.getValue()));
     }
 
     public static Entry<DisguisePerm, Disguise> getCustomDisguise(CommandSender invoker, Entity target, String disguise)
@@ -556,77 +540,9 @@ public class DisguiseConfig {
         TranslateType.refreshTranslations();
     }
 
-    public static void saveDefaultConfig() {
-        DisguiseUtilities.getLogger().info("Config is out of date! Now updating it!");
-        String[] string =
-                ReflectionManager.getResourceAsString(LibsDisguises.getInstance().getFile(), "config.yml").split("\n");
-        FileConfiguration savedConfig = LibsDisguises.getInstance().getConfig();
-
-        StringBuilder section = new StringBuilder();
-
-        for (int i = 0; i < string.length; i++) {
-            String s = string[i];
-
-            if (s.trim().startsWith("#") || !s.contains(":")) {
-                continue;
-            }
-
-            String rawKey = s.split(":")[0];
-
-            if (section.length() > 0) {
-                int matches = StringUtils.countMatches(rawKey, "  ");
-
-                int allowed = 0;
-
-                for (int a = 0; a < matches; a++) {
-                    allowed = section.indexOf(".", allowed) + 1;
-                }
-
-                section = new StringBuilder(section.substring(0, allowed));
-            }
-
-            String key = (rawKey.startsWith(" ") ? section.toString() : "") + rawKey.trim();
-
-            if (savedConfig.isConfigurationSection(key)) {
-                section.append(key).append(".");
-            } else if (savedConfig.isSet(key)) {
-                String rawVal = s.split(":")[1].trim();
-                Object val = savedConfig.get(key);
-
-                if (savedConfig.isString(key) && !rawVal.equals("true") && !rawVal.equals("false")) {
-                    val = "'" + StringEscapeUtils.escapeJava(val.toString().replace(ChatColor.COLOR_CHAR + "", "&")) +
-                            "'";
-                }
-
-                string[i] = rawKey + ": " + val;
-            }
-        }
-
-        File config = new File(LibsDisguises.getInstance().getDataFolder(), "config.yml");
-
-        try {
-            if (config.exists()) {
-                config.renameTo(new File(config.getParentFile(), "config-old.yml"));
-
-                DisguiseUtilities.getLogger().info("Old config has been copied to config-old.yml");
-            }
-
-            config.createNewFile();
-
-            try (PrintWriter out = new PrintWriter(config)) {
-                out.write(StringUtils.join(string, "\n"));
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public static void loadConfig() {
-        // Always save the default config
-        LibsDisguises.getInstance().saveDefaultConfig();
-        // Redundant for the first load, however other plugins may call loadConfig() at a later stage where we
-        // definitely want to reload it.
-        LibsDisguises.getInstance().reloadConfig();
+        ConfigLoader configLoader = new ConfigLoader();
+        configLoader.saveMissingConfigs();
 
         loadModdedDisguiseTypes();
 
@@ -641,18 +557,16 @@ public class DisguiseConfig {
                 explain.createNewFile();
 
                 try (PrintWriter out = new PrintWriter(explain)) {
-                    out.println("This folder is used to store .png files for uploading with the /savedisguise or " +
-                            "/grabskin " + "commands");
+                    out.println("This folder is used to store .png files for uploading with the /savedisguise or " + "/grabskin " + "commands");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        ConfigurationSection config = LibsDisguises.getInstance().getConfig();
+        ConfigurationSection config = configLoader.load();
 
         PacketsManager.setViewDisguisesListener(true);
-        disableCommands = config.getBoolean("DisableCommands");
 
         setAddEntityAnimations(config.getBoolean("AddEntityAnimations"));
         setAnimationPacketsEnabled(config.getBoolean("PacketsEnabled.Animation"));
@@ -663,10 +577,8 @@ public class DisguiseConfig {
         setDisablePvP(config.getBoolean("DisablePvP"));
         setDisablePvE(config.getBoolean("DisablePvE"));
         setPvPTimer(config.getDouble("PvPTimer"));
-        setDisguiseBlownWhenAttacked(
-                config.getBoolean("BlowDisguises", config.getBoolean("BlowDisguisesWhenAttacked")));
-        setDisguiseBlownWhenAttacking(
-                config.getBoolean("BlowDisguises", config.getBoolean("BlowDisguisesWhenAttacking")));
+        setDisguiseBlownWhenAttacked(config.getBoolean("BlowDisguises", config.getBoolean("BlowDisguisesWhenAttacked")));
+        setDisguiseBlownWhenAttacking(config.getBoolean("BlowDisguises", config.getBoolean("BlowDisguisesWhenAttacking")));
         setDisguiseCloneExpire(config.getInt("DisguiseCloneExpire"));
         setDisguiseEntityExpire(config.getInt("DisguiseEntityExpire"));
         setDynamicExpiry(config.getBoolean("DynamicExpiry"));
@@ -691,7 +603,6 @@ public class DisguiseConfig {
         setNameAboveHeadAlwaysVisible(config.getBoolean("NameAboveHeadAlwaysVisible"));
         setNameOfPlayerShownAboveDisguise(config.getBoolean("ShowNamesAboveDisguises"));
         setNameAboveDisguise(config.getString("NameAboveDisguise"));
-        setPlayerDisguisesTablistExpires(config.getInt("PlayerDisguisesTablistExpiry"));
         setPlayerHideArmor(config.getBoolean("PlayerHideArmor"));
         setRetaliationCombat(config.getBoolean("RetaliationCombat"));
         setSaveGameProfiles(config.getBoolean("SaveGameProfiles"));
@@ -720,6 +631,8 @@ public class DisguiseConfig {
         setSaveUserPreferences(config.getBoolean("SaveUserPreferences"));
         setPlayerDisguisesSkinExpiresMove(config.getInt("PlayerDisguisesTablistExpiresMove"));
         setViewSelfDisguisesDefault(config.getBoolean("ViewSelfDisguisesDefault"));
+        setContactMojangServers(config.getBoolean("ContactMojangServers"));
+        setDisguiseRadiusMax(config.getInt("DisguiseRadiusMax"));
 
         if (!LibsPremium.isPremium() && (isSavePlayerDisguises() || isSaveEntityDisguises())) {
             DisguiseUtilities.getLogger().warning("You must purchase the plugin to use saved disguises!");
@@ -728,49 +641,42 @@ public class DisguiseConfig {
         try {
             setPlayerNameType(PlayerNameType.valueOf(config.getString("PlayerNames").toUpperCase(Locale.ENGLISH)));
         } catch (Exception ex) {
-            DisguiseUtilities.getLogger().warning(
-                    "Cannot parse '" + config.getString("PlayerNames") + "' to a valid option for PlayerNames");
+            DisguiseUtilities.getLogger().warning("Cannot parse '" + config.getString("PlayerNames") + "' to a valid option for PlayerNames");
         }
 
         try {
             setNotifyBar(NotifyBar.valueOf(config.getString("NotifyBar").toUpperCase(Locale.ENGLISH)));
 
             if (getNotifyBar() == NotifyBar.BOSS_BAR && !NmsVersion.v1_13.isSupported()) {
-                DisguiseUtilities.getLogger().warning(
-                        "BossBars hasn't been implemented properly in 1.12 due to api restrictions, falling back to " +
-                                "ACTION_BAR");
+                DisguiseUtilities.getLogger()
+                        .warning("BossBars hasn't been implemented properly in 1.12 due to api restrictions, falling back to " + "ACTION_BAR");
 
                 setNotifyBar(NotifyBar.ACTION_BAR);
             }
         } catch (Exception ex) {
-            DisguiseUtilities.getLogger()
-                    .warning("Cannot parse '" + config.getString("NotifyBar") + "' to a valid option for NotifyBar");
+            DisguiseUtilities.getLogger().warning("Cannot parse '" + config.getString("NotifyBar") + "' to a valid option for NotifyBar");
         }
 
         try {
             setBossBarColor(BarColor.valueOf(config.getString("BossBarColor").toUpperCase(Locale.ENGLISH)));
         } catch (Exception ex) {
-            DisguiseUtilities.getLogger().warning(
-                    "Cannot parse '" + config.getString("BossBarColor") + "' to a valid option for BossBarColor");
+            DisguiseUtilities.getLogger().warning("Cannot parse '" + config.getString("BossBarColor") + "' to a valid option for BossBarColor");
         }
 
         try {
             setBossBarStyle(BarStyle.valueOf(config.getString("BossBarStyle").toUpperCase(Locale.ENGLISH)));
         } catch (Exception ex) {
-            DisguiseUtilities.getLogger().warning(
-                    "Cannot parse '" + config.getString("BossBarStyle") + "' to a valid option for BossBarStyle");
+            DisguiseUtilities.getLogger().warning("Cannot parse '" + config.getString("BossBarStyle") + "' to a valid option for BossBarStyle");
         }
 
         try {
             setUpdatesBranch(UpdatesBranch.valueOf(config.getString("UpdatesBranch").toUpperCase(Locale.ENGLISH)));
         } catch (Exception ex) {
-            DisguiseUtilities.getLogger().warning(
-                    "Cannot parse '" + config.getString("UpdatesBranch") + "' to a valid option for UpdatesBranch");
+            DisguiseUtilities.getLogger().warning("Cannot parse '" + config.getString("UpdatesBranch") + "' to a valid option for UpdatesBranch");
         }
 
         try {
-            String option = config.getString("SelfDisguisesScoreboard", DisguisePushing.MODIFY_SCOREBOARD.name())
-                    .toUpperCase(Locale.ENGLISH);
+            String option = config.getString("SelfDisguisesScoreboard", DisguisePushing.MODIFY_SCOREBOARD.name()).toUpperCase(Locale.ENGLISH);
 
             if (!option.endsWith("_SCOREBOARD")) {
                 option += "_SCOREBOARD";
@@ -778,15 +684,15 @@ public class DisguiseConfig {
 
             pushingOption = DisguisePushing.valueOf(option);
         } catch (Exception ex) {
-            DisguiseUtilities.getLogger().warning("Cannot parse '" + config.getString("SelfDisguisesScoreboard") +
-                    "' to a valid option for SelfDisguisesScoreboard");
+            DisguiseUtilities.getLogger()
+                    .warning("Cannot parse '" + config.getString("SelfDisguisesScoreboard") + "' to a valid option for SelfDisguisesScoreboard");
         }
 
         PermissionDefault commandVisibility = PermissionDefault.getByName(config.getString("Permissions.SeeCommands"));
 
         if (commandVisibility == null) {
-            DisguiseUtilities.getLogger().warning("Invalid option '" + config.getString("Permissions.SeeCommands") +
-                    "' for Permissions.SeeCommands when loading config!");
+            DisguiseUtilities.getLogger()
+                    .warning("Invalid option '" + config.getString("Permissions.SeeCommands") + "' for Permissions.SeeCommands when loading config!");
         } else {
             setCommandVisibility(commandVisibility);
         }
@@ -815,9 +721,7 @@ public class DisguiseConfig {
         if (config.contains("VerboseConfig")) {
             verbose = config.getBoolean("VerboseConfig");
         } else {
-            DisguiseUtilities.getLogger()
-                    .info("As 'VerboseConfig' hasn't been set, it is assumed true. Set it in your config to remove " +
-                            "these messages!");
+            DisguiseUtilities.getLogger().info("As 'VerboseConfig' hasn't been set, it is assumed true. Set it in your config to remove " + "these messages!");
             verbose = true;
         }
 
@@ -827,9 +731,8 @@ public class DisguiseConfig {
             ArrayList<String> returns = doOutput(config, changed, verbose);
 
             if (!returns.isEmpty()) {
-                DisguiseUtilities.getLogger()
-                        .info("This is not an error! Now outputting " + (verbose ? "missing " : "") +
-                                (changed ? (verbose ? "and " : "") + "changed/invalid " : "") + "config values");
+                DisguiseUtilities.getLogger().info("This is not an error! Now outputting " + (verbose ? "missing " : "") +
+                        (changed ? (verbose ? "and " : "") + "changed/invalid " : "") + "config values");
 
                 for (String v : returns) {
                     DisguiseUtilities.getLogger().info(v);
@@ -837,25 +740,15 @@ public class DisguiseConfig {
             }
         }
 
-        int missingConfigs = 0;
-
-        for (String key : config.getDefaultSection().getKeys(true)) {
-            if (config.contains(key, true)) {
-                continue;
-            }
-
-            missingConfigs++;
-        }
+        int missingConfigs = doOutput(config, false, true).size();
 
         if (missingConfigs > 0) {
             if (config.getBoolean("UpdateConfig", true)) {
-                saveDefaultConfig();
+                configLoader.saveDefaultConfigs();
                 DisguiseUtilities.getLogger().info("Config has been auto-updated!");
             } else if (!verbose) {
-                DisguiseUtilities.getLogger().warning("Your config is missing " + missingConfigs +
-                        " options! Please consider regenerating your config!");
-                DisguiseUtilities.getLogger()
-                        .info("You can also add the missing entries yourself! Try '/libsdisguises config'");
+                DisguiseUtilities.getLogger().warning("Your config is missing " + missingConfigs + " options! Please consider regenerating your config!");
+                DisguiseUtilities.getLogger().info("You can also add the missing entries yourself! Try '/libsdisguises config'");
             }
         } else {
             DisguiseUtilities.getLogger().info("Config is up to date!");
@@ -863,7 +756,7 @@ public class DisguiseConfig {
     }
 
     public static void loadModdedDisguiseTypes() {
-        File disguisesFile = new File("plugins/LibsDisguises/disguises.yml");
+        File disguisesFile = new File(LibsDisguises.getInstance().getDataFolder(), "configs/disguises.yml");
 
         if (!disguisesFile.exists()) {
             return;
@@ -904,8 +797,7 @@ public class DisguiseConfig {
                 boolean living = section.getString("Type", "LIVING").equalsIgnoreCase("LIVING");
                 String type = section.getString("Type");
                 String mod = section.getString("Mod");
-                String[] version =
-                        mod == null || !section.contains("Version") ? null : section.getString("Version").split(",");
+                String[] version = mod == null || !section.contains("Version") ? null : section.getString("Version").split(",");
                 String requireMessage = mod == null ? null : section.getString("Required");
 
                 if (section.contains("Channels")) {
@@ -926,17 +818,14 @@ public class DisguiseConfig {
                 ModdedEntity entity = new ModdedEntity(null, name, living, mod, version, requireMessage, 0);
 
                 if (ModdedManager.getModdedEntity(name) != null) {
-                    DisguiseUtilities.getLogger()
-                            .info("Modded entity " + name + " has already been " + (register ? "registered" : "added"));
+                    DisguiseUtilities.getLogger().info("Modded entity " + name + " has already been " + (register ? "registered" : "added"));
                     continue;
                 }
 
-                ModdedManager.registerModdedEntity(
-                        new NamespacedKey(key.substring(0, key.indexOf(":")), key.substring(key.indexOf(":") + 1)),
-                        entity, register);
+                ModdedManager
+                        .registerModdedEntity(new NamespacedKey(key.substring(0, key.indexOf(":")), key.substring(key.indexOf(":") + 1)), entity, register);
 
-                DisguiseUtilities.getLogger()
-                        .info("Modded entity " + name + " has been " + (register ? "registered" : "added"));
+                DisguiseUtilities.getLogger().info("Modded entity " + name + " has been " + (register ? "registered" : "added"));
             } catch (Exception ex) {
                 DisguiseUtilities.getLogger().severe("Error while trying to register modded entity " + name);
                 ex.printStackTrace();
@@ -946,10 +835,18 @@ public class DisguiseConfig {
         new ModdedManager(channels);
     }
 
-    public static ArrayList<String> doOutput(ConfigurationSection config, boolean informChangedUnknown,
-                                             boolean informMissing) {
+    public static ArrayList<String> doOutput(boolean informChangedUnknown, boolean informMissing) {
+        return doOutput(new ConfigLoader().load(), informChangedUnknown, informMissing);
+    }
+
+    public static ArrayList<String> doOutput(ConfigurationSection config, boolean informChangedUnknown, boolean informMissing) {
         HashMap<String, Object> configs = new HashMap<>();
         ConfigurationSection defaultSection = config.getDefaultSection();
+
+        if (defaultSection == null) {
+            defaultSection = new ConfigLoader().loadDefaults();
+        }
+
         ArrayList<String> returns = new ArrayList<>();
 
         for (String key : defaultSection.getKeys(true)) {
@@ -993,7 +890,7 @@ public class DisguiseConfig {
     static void loadCustomDisguises() {
         customDisguises.clear();
 
-        File disguisesFile = new File("plugins/LibsDisguises/disguises.yml");
+        File disguisesFile = new File(LibsDisguises.getInstance().getDataFolder(), "configs/disguises.yml");
 
         if (!disguisesFile.exists()) {
             return;
@@ -1013,8 +910,8 @@ public class DisguiseConfig {
             String toParse = section.getString(key);
 
             if (!NmsVersion.v1_13.isSupported() && key.equals("libraryaddict")) {
-                toParse = toParse.replace("GOLDEN_BOOTS,GOLDEN_LEGGINGS,GOLDEN_CHESTPLATE,GOLDEN_HELMET",
-                        "GOLD_BOOTS,GOLD_LEGGINGS,GOLD_CHESTPLATE,GOLD_HELMET");
+                toParse =
+                        toParse.replace("GOLDEN_BOOTS,GOLDEN_LEGGINGS,GOLDEN_CHESTPLATE,GOLDEN_HELMET", "GOLD_BOOTS,GOLD_LEGGINGS,GOLD_CHESTPLATE,GOLD_HELMET");
             }
 
             try {
@@ -1040,8 +937,7 @@ public class DisguiseConfig {
             DisguiseUtilities.getLogger().warning("Failed to load " + failedCustomDisguises + " custom disguises");
         }
 
-        DisguiseUtilities.getLogger().info("Loaded " + customDisguises.size() + " custom disguise" +
-                (customDisguises.size() == 1 ? "" : "s"));
+        DisguiseUtilities.getLogger().info("Loaded " + customDisguises.size() + " custom disguise" + (customDisguises.size() == 1 ? "" : "s"));
     }
 
     public static void addCustomDisguise(String disguiseName, String toParse) throws DisguiseParseException {
@@ -1065,8 +961,7 @@ public class DisguiseConfig {
 
             DisguiseUtilities.getLogger().info("Loaded custom disguise " + disguiseName);
         } catch (DisguiseParseException e) {
-            throw new DisguiseParseException(LibsMsg.ERROR_LOADING_CUSTOM_DISGUISE, disguiseName,
-                    (e.getMessage() == null ? "" : ": " + e.getMessage()));
+            throw new DisguiseParseException(LibsMsg.ERROR_LOADING_CUSTOM_DISGUISE, disguiseName, (e.getMessage() == null ? "" : ": " + e.getMessage()));
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
             throw new DisguiseParseException(LibsMsg.ERROR_LOADING_CUSTOM_DISGUISE, disguiseName, "");

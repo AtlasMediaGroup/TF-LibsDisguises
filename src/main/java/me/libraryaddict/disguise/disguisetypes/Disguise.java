@@ -149,10 +149,18 @@ public abstract class Disguise {
     public abstract double getHeight();
 
     protected void sendArmorStands(String[] oldName) {
+        if (!isDisguiseInUse()) {
+            return;
+        }
+
         ArrayList<PacketContainer> packets = DisguiseUtilities.getNamePackets(this, oldName);
 
         try {
             for (Player player : DisguiseUtilities.getPerverts(this)) {
+                if (isPlayerDisguise() && LibsDisguises.getInstance().getSkinHandler().isSleeping(player, (PlayerDisguise) this)) {
+                    continue;
+                }
+
                 for (PacketContainer packet : packets) {
                     ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
                 }
@@ -414,7 +422,7 @@ public abstract class Disguise {
             private int blockX, blockY, blockZ, facing;
             private int deadTicks = 0;
             private int actionBarTicks = -1;
-            private long lastRefreshed;
+            private long lastRefreshed = System.currentTimeMillis();
 
             @Override
             public void run() {
@@ -461,8 +469,8 @@ public abstract class Disguise {
 
                 // If the disguise type is tnt, we need to resend the entity packet else it will turn invisible
                 if (getType() == DisguiseType.FIREWORK || getType() == DisguiseType.EVOKER_FANGS) {
-                    if (lastRefreshed < System.currentTimeMillis()) {
-                        lastRefreshed = System.currentTimeMillis() + ((getType() == DisguiseType.FIREWORK ? 40 : 23) * 50);
+                    if (lastRefreshed + ((getType() == DisguiseType.FIREWORK ? 40 : 23) * 50) < System.currentTimeMillis()) {
+                        lastRefreshed = System.currentTimeMillis();
 
                         DisguiseUtilities.refreshTrackers(disguise);
                     }
@@ -924,7 +932,7 @@ public abstract class Disguise {
 
         // If this disguise is active
         // Remove the disguise from the current disguises.
-        if (DisguiseUtilities.removeDisguise((TargetedDisguise) this)) {
+        if (DisguiseUtilities.removeDisguise((TargetedDisguise) this) && !disguiseBeingReplaced) {
             if (getEntity() instanceof Player) {
                 DisguiseUtilities.removeSelfDisguise(this);
             }
@@ -1073,6 +1081,17 @@ public abstract class Disguise {
             multiName = new String[0];
         }
 
+        // Removed as its not compatible with scoreboard teams
+        /*if (((TargetedDisguise) this).getDisguiseTarget() == TargetType.SHOW_TO_EVERYONE_BUT_THESE_PLAYERS) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (!player.hasPermission("libsdisguises.seethrough")) {
+                    continue;
+                }
+
+                ((TargetedDisguise) this).addPlayer(player);
+            }
+        }*/
+
         if (LibsPremium.getUserID().equals("123" + "45") || !LibsMsg.OWNED_BY.getRaw().contains("'")) {
             ((TargetedDisguise) this).setDisguiseTarget(TargetType.HIDE_DISGUISE_TO_EVERYONE_BUT_THESE_PLAYERS);
 
@@ -1148,9 +1167,9 @@ public abstract class Disguise {
                 }, 2);
 
         if (isHidePlayer() && getEntity() instanceof Player) {
-            PacketContainer addTab = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
-            addTab.getPlayerInfoAction().write(0, PlayerInfoAction.REMOVE_PLAYER);
-            addTab.getPlayerInfoDataLists().write(0, Collections.singletonList(
+            PacketContainer removeTab = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
+            removeTab.getPlayerInfoAction().write(0, PlayerInfoAction.REMOVE_PLAYER);
+            removeTab.getPlayerInfoDataLists().write(0, Collections.singletonList(
                     new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0, NativeGameMode.SURVIVAL, WrappedChatComponent.fromText(""))));
 
             try {
@@ -1159,7 +1178,7 @@ public abstract class Disguise {
                         continue;
                     }
 
-                    ProtocolLibrary.getProtocolManager().sendServerPacket(player, addTab);
+                    ProtocolLibrary.getProtocolManager().sendServerPacket(player, removeTab);
                 }
             } catch (InvocationTargetException e) {
                 e.printStackTrace();

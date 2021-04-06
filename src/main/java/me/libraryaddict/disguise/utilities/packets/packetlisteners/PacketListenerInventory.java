@@ -36,15 +36,12 @@ public class PacketListenerInventory extends PacketAdapter {
 
     @Override
     public void onPacketReceiving(final PacketEvent event) {
-        if (event.isCancelled())
+        if (event.isCancelled() || event.isPlayerTemporary())
             return;
 
         final Player player = event.getPlayer();
 
-        if (player.getName().contains("UNKNOWN[")) // If the player is temporary
-            return;
-
-        if (player instanceof com.comphenix.net.sf.cglib.proxy.Factory || player.getVehicle() != null) {
+        if (player == null || player.getVehicle() != null) {
             return;
         }
 
@@ -250,7 +247,7 @@ public class PacketListenerInventory extends PacketAdapter {
         Player player = event.getPlayer();
 
         // If the inventory is the players inventory
-        if (player instanceof com.comphenix.net.sf.cglib.proxy.Factory || player.getVehicle() != null ||
+        if (event.isPlayerTemporary() || player.getVehicle() != null ||
                 event.getPacket().getIntegers().read(0) != 0) {
             return;
         }

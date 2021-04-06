@@ -30,7 +30,7 @@ public class PlayerDisguise extends TargetedDisguise {
      * Has someone set name visible explicitly?
      */
     private boolean explicitNameVisible = false;
-    private final UUID uuid = UUID.randomUUID();
+    private final UUID uuid = ReflectionManager.getRandomUUID();
     private transient DisguiseUtilities.DScoreTeam scoreboardName;
     @Getter
     private boolean deadmau5Ears;
@@ -143,9 +143,12 @@ public class PlayerDisguise extends TargetedDisguise {
         return DisguiseConfig.isScoreboardNames();
     }
 
+    /**
+     * The actual name that'll be sent in the game profile, not the name that they're known as
+     */
     public String getProfileName() {
         return isUpsideDown() ? "Dinnerbone" :
-                isDeadmau5Ears() ? "deadmau5" : hasScoreboardName() ? getScoreboardName().getPlayer() : getName();
+                isDeadmau5Ears() ? "deadmau5" : hasScoreboardName() ? getScoreboardName().getPlayer() : getName().isEmpty() ? "§r" : getName();
     }
 
     public UUID getUUID() {
@@ -246,8 +249,7 @@ public class PlayerDisguise extends TargetedDisguise {
 
         if (currentLookup == null && gameProfile != null) {
             disguise.skinToUse = getSkin();
-            disguise.gameProfile = ReflectionManager
-                    .getGameProfileWithThisSkin(disguise.uuid, getGameProfile().getName(), getGameProfile());
+            disguise.gameProfile = ReflectionManager.getGameProfileWithThisSkin(disguise.uuid, getGameProfile().getName(), getGameProfile());
         } else {
             disguise.setSkin(getSkin());
         }
@@ -268,8 +270,7 @@ public class PlayerDisguise extends TargetedDisguise {
             if (getSkin() != null) {
                 gameProfile = ReflectionManager.getGameProfile(uuid, getProfileName());
             } else {
-                gameProfile = ReflectionManager.getGameProfileWithThisSkin(uuid, getProfileName(),
-                        DisguiseUtilities.getProfileFromMojang(this));
+                gameProfile = ReflectionManager.getGameProfileWithThisSkin(uuid, getProfileName(), DisguiseUtilities.getProfileFromMojang(this));
             }
         }
 
@@ -293,9 +294,8 @@ public class PlayerDisguise extends TargetedDisguise {
             }
         }
 
-        if (DisguiseConfig.isCopyPlayerTeamInfo() &&
-                (DisguiseConfig.getPlayerNameType() == DisguiseConfig.PlayerNameType.TEAMS ||
-                        DisguiseConfig.getPlayerNameType() == DisguiseConfig.PlayerNameType.ARMORSTANDS)) {
+        if (DisguiseConfig.isCopyPlayerTeamInfo() && (DisguiseConfig.getPlayerNameType() == DisguiseConfig.PlayerNameType.TEAMS ||
+                DisguiseConfig.getPlayerNameType() == DisguiseConfig.PlayerNameType.ARMORSTANDS)) {
             name = DisguiseUtilities.getDisplayName(name);
         }
 
@@ -341,8 +341,7 @@ public class PlayerDisguise extends TargetedDisguise {
                     setScoreboardName(split);
                 }
 
-                resendDisguise = !DisguiseConfig.isScoreboardNames() || isStaticName(name) || isStaticName(getName()) ||
-                        resendDisguise;
+                resendDisguise = !DisguiseConfig.isScoreboardNames() || isStaticName(name) || isStaticName(getName()) || resendDisguise;
 
                 if (resendDisguise) {
                     resendDisguise(name, false);
@@ -473,8 +472,7 @@ public class PlayerDisguise extends TargetedDisguise {
                     }
                 };
 
-                WrappedGameProfile gameProfile = DisguiseUtilities.getProfileFromMojang(this.skinToUse, currentLookup,
-                        LibsDisguises.getInstance().getConfig().getBoolean("ContactMojangServers", true));
+                WrappedGameProfile gameProfile = DisguiseUtilities.getProfileFromMojang(this.skinToUse, currentLookup, DisguiseConfig.isContactMojangServers());
 
                 if (gameProfile != null) {
                     setSkin(gameProfile);
@@ -509,13 +507,11 @@ public class PlayerDisguise extends TargetedDisguise {
     }
 
     private WrappedGameProfile getProfile(String string) {
-        if (string != null && string.length() > 70 && string.startsWith("{\"id\":") && string.endsWith("}") &&
-                string.contains(",\"name\":")) {
+        if (string != null && string.length() > 70 && string.startsWith("{\"id\":") && string.endsWith("}") && string.contains(",\"name\":")) {
             try {
                 return DisguiseUtilities.getGson().fromJson(string, WrappedGameProfile.class);
             } catch (Exception ex) {
-                throw new IllegalStateException(
-                        "Tried to parse " + string + " to a GameProfile, but it has been formatted incorrectly!");
+                throw new IllegalStateException("Tried to parse " + string + " to a GameProfile, but it has been formatted incorrectly!");
             }
         }
 
@@ -523,29 +519,31 @@ public class PlayerDisguise extends TargetedDisguise {
     }
 
     private void refreshDisguise() {
-        if (DisguiseUtilities.isDisguiseInUse(this)) {
-            if (isDisplayedInTab()) {
-                PacketContainer addTab = DisguiseUtilities.getTabPacket(this, PlayerInfoAction.ADD_PLAYER);
-
-                PacketContainer deleteTab = addTab.shallowClone();
-                deleteTab.getPlayerInfoAction().write(0, PlayerInfoAction.REMOVE_PLAYER);
-
-                try {
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        if (!canSee(player)) {
-                            continue;
-                        }
-
-                        ProtocolLibrary.getProtocolManager().sendServerPacket(player, deleteTab);
-                        ProtocolLibrary.getProtocolManager().sendServerPacket(player, addTab);
-                    }
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            DisguiseUtilities.refreshTrackers(this);
+        if (!DisguiseUtilities.isDisguiseInUse(this)) {
+            return;
         }
+
+        if (isDisplayedInTab()) {
+            PacketContainer addTab = DisguiseUtilities.getTabPacket(this, PlayerInfoAction.ADD_PLAYER);
+
+            PacketContainer deleteTab = addTab.shallowClone();
+            deleteTab.getPlayerInfoAction().write(0, PlayerInfoAction.REMOVE_PLAYER);
+
+            try {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (!canSee(player)) {
+                        continue;
+                    }
+
+                    ProtocolLibrary.getProtocolManager().sendServerPacket(player, deleteTab);
+                    ProtocolLibrary.getProtocolManager().sendServerPacket(player, addTab);
+                }
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+
+        DisguiseUtilities.refreshTrackers(this);
     }
 
     @Override
@@ -641,8 +639,7 @@ public class PlayerDisguise extends TargetedDisguise {
                 }
             };
 
-            WrappedGameProfile gameProfile = DisguiseUtilities.getProfileFromMojang(this.skinToUse, currentLookup,
-                    LibsDisguises.getInstance().getConfig().getBoolean("ContactMojangServers", true));
+            WrappedGameProfile gameProfile = DisguiseUtilities.getProfileFromMojang(this.skinToUse, currentLookup, DisguiseConfig.isContactMojangServers());
 
             if (gameProfile != null) {
                 setSkin(gameProfile);
@@ -702,7 +699,11 @@ public class PlayerDisguise extends TargetedDisguise {
     public boolean removeDisguise(boolean disguiseBeingReplaced) {
         boolean result = super.removeDisguise(disguiseBeingReplaced);
 
-        if (result && hasScoreboardName()) {
+        if (!result) {
+            return result;
+        }
+
+        if (hasScoreboardName()) {
             if (disguiseBeingReplaced) {
                 new BukkitRunnable() {
                     @Override

@@ -1,20 +1,13 @@
 package me.libraryaddict.disguise.commands.libsdisguises;
 
-import com.comphenix.protocol.ProtocolLibrary;
 import me.libraryaddict.disguise.LibsDisguises;
+import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
-import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,24 +48,7 @@ public class LDUpdateProtocolLib implements LDCommand {
                 File protocolLibFile = null;
 
                 try {
-                    Method getFile = JavaPlugin.class.getDeclaredMethod("getFile");
-                    getFile.setAccessible(true);
-                    File theirFile = (File) getFile.invoke(ProtocolLibrary.getPlugin());
-                    File dest = new File("plugins/update/" + theirFile.getName());
-
-                    // We're connecting to spigot's API
-                    URL url =
-                            new URL("https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/target" +
-                                    "/ProtocolLib" +
-                                    ".jar");
-                    // Creating a connection
-                    HttpURLConnection con = (HttpURLConnection) url.openConnection();
-                    con.setRequestProperty("User-Agent", "libraryaddict/LibsDisguises");
-
-                    // Get the input stream, what we receive
-                    try (InputStream input = con.getInputStream()) {
-                        Files.copy(input, dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    }
+                    DisguiseUtilities.updateProtocolLib();
 
                     new BukkitRunnable() {
                         @Override
@@ -86,6 +62,9 @@ public class LDUpdateProtocolLib implements LDCommand {
                     new BukkitRunnable() {
                         @Override
                         public void run() {
+                            sender.sendMessage(ChatColor.RED +
+                                    "Looks like ProtocolLib's site may be down! MythicCraft/MythicMobs has a discord server https://discord.gg/EErRhJ4qgx you" +
+                                    " can join. Check the pins in #libs-support for a ProtocolLib.jar you can download!");
                             sender.sendMessage(ChatColor.RED + "Update failed, " + ex.getMessage());
                         }
                     }.runTask(LibsDisguises.getInstance());

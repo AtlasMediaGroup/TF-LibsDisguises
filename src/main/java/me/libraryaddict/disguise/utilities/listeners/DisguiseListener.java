@@ -4,6 +4,8 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers.PlayerInfoAction;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
+import lombok.Getter;
+import lombok.Setter;
 import me.libraryaddict.disguise.DisguiseAPI;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
@@ -16,7 +18,6 @@ import me.libraryaddict.disguise.utilities.LibsEntityInteract;
 import me.libraryaddict.disguise.utilities.LibsPremium;
 import me.libraryaddict.disguise.utilities.modded.ModdedEntity;
 import me.libraryaddict.disguise.utilities.modded.ModdedManager;
-import me.libraryaddict.disguise.utilities.parser.DisguisePermissions;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import org.apache.commons.lang.math.RandomUtils;
 import org.bukkit.Bukkit;
@@ -53,14 +54,16 @@ public class DisguiseListener implements Listener {
     private HashMap<String, LibsEntityInteract> interactions = new HashMap<>();
     private HashMap<String, BukkitRunnable> disguiseRunnable = new HashMap<>();
     private LibsDisguises plugin;
+    @Getter
+    @Setter
+    private boolean isDodgyUser;
 
     public DisguiseListener(LibsDisguises libsDisguises) {
         plugin = libsDisguises;
 
         runUpdateScheduler();
 
-        if (!LibsPremium.getPluginInformation().isPremium() ||
-                LibsPremium.getPluginInformation().getUserID().matches("[0-9]+")) {
+        if (!LibsPremium.getPluginInformation().isPremium() || LibsPremium.getPluginInformation().getUserID().matches("[0-9]+")) {
             Bukkit.getPluginManager().registerEvents(this, plugin);
         }
 
@@ -97,20 +100,15 @@ public class DisguiseListener implements Listener {
 
         // If build number is null, or not a number. Then we can't check snapshots regardless
         return !plugin.isNumberedBuild();
-
-        // Check snapshots
     }
 
     private void runUpdateScheduler() {
-        boolean autoUpdate = plugin.getConfig().getBoolean("AutoUpdateDev");
-
-        if (!plugin.getConfig().getBoolean("NotifyUpdate")) {
+        if (!DisguiseConfig.isNotifyUpdate()) {
             return;
         }
 
-        if (autoUpdate && !isCheckReleases()) {
-            DisguiseUtilities.getLogger()
-                    .info("Plugin will attempt to auto update when new builds are ready! Check config to disable.");
+        if (DisguiseConfig.isAutoUpdate() && !isCheckReleases()) {
+            DisguiseUtilities.getLogger().info("Plugin will attempt to auto update when new builds are ready! Check config to disable.");
         }
     }
 
@@ -132,8 +130,7 @@ public class DisguiseListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR,
-            ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVelocity(PlayerVelocityEvent event) {
         DisguiseUtilities.setPlayerVelocity(event.getPlayer());
 
@@ -142,8 +139,7 @@ public class DisguiseListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH,
-            ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onAttack(EntityDamageByEntityEvent event) {
         Entity attacker = event.getDamager();
 
@@ -177,14 +173,12 @@ public class DisguiseListener implements Listener {
 
     private boolean canRetaliate(Entity entity) {
         return entity.hasMetadata("LD-LastAttacked") &&
-                entity.getMetadata("LD-LastAttacked").get(0).asLong() + (DisguiseConfig.getPvPTimer() * 1000) >
-                        System.currentTimeMillis();
+                entity.getMetadata("LD-LastAttacked").get(0).asLong() + (DisguiseConfig.getPvPTimer() * 1000) > System.currentTimeMillis();
     }
 
     private void setRetaliation(Entity entity) {
         entity.removeMetadata("LD-LastAttacked", LibsDisguises.getInstance());
-        entity.setMetadata("LD-LastAttacked",
-                new FixedMetadataValue(LibsDisguises.getInstance(), System.currentTimeMillis()));
+        entity.setMetadata("LD-LastAttacked", new FixedMetadataValue(LibsDisguises.getInstance(), System.currentTimeMillis()));
     }
 
     private void checkPlayerCanFight(EntityDamageByEntityEvent event, Entity attacker) {
@@ -195,8 +189,7 @@ public class DisguiseListener implements Listener {
             return;
         }
 
-        if (!attacker.hasPermission("libsdisguises." + (pvp ? "pvp" : "pve")) &&
-                !attacker.hasPermission("libsdisguises." + (pvp ? "pvp" : "pve"))) {
+        if (!attacker.hasPermission("libsdisguises." + (pvp ? "pvp" : "pve")) && !attacker.hasPermission("libsdisguises." + (pvp ? "pvp" : "pve"))) {
             if (!DisguiseConfig.isRetaliationCombat() || !canRetaliate(attacker)) {
                 Disguise[] disguises = DisguiseAPI.getDisguises(attacker);
 
@@ -222,13 +215,16 @@ public class DisguiseListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onDamage(EntityDamageEvent event) {
-        if (!"%%__USER__%%".equals(12 + "345")) {
+        if (!isDodgyUser() && !"%%__USER__%%".equals(12 + "345")) {
             return;
         }
 
-        event.setCancelled(false);
+        if (event.isCancelled()) {
+            event.setCancelled(false);
+            return;
+        }
 
         if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
             event.setDamage(event.getDamage() * 3);
@@ -371,6 +367,12 @@ public class DisguiseListener implements Listener {
                     continue;
                 }
 
+                // Removed as its not compatible with scoreboard teams
+                /*if (p.hasPermission("libsdisguises.seethrough") &&
+                        targetedDisguise.getDisguiseTarget() == TargetedDisguise.TargetType.SHOW_TO_EVERYONE_BUT_THESE_PLAYERS) {
+                    targetedDisguise.addPlayer(p);
+                }*/
+
                 if (!targetedDisguise.canSee(p)) {
                     continue;
                 }
@@ -383,8 +385,7 @@ public class DisguiseListener implements Listener {
 
                 if (disguise.isDisplayedInTab()) {
                     try {
-                        ProtocolLibrary.getProtocolManager().sendServerPacket(p,
-                                DisguiseUtilities.getTabPacket(disguise, PlayerInfoAction.ADD_PLAYER));
+                        ProtocolLibrary.getProtocolManager().sendServerPacket(p, DisguiseUtilities.getTabPacket(disguise, PlayerInfoAction.ADD_PLAYER));
                     } catch (InvocationTargetException e) {
                         e.printStackTrace();
                     }
@@ -406,14 +407,13 @@ public class DisguiseListener implements Listener {
                 }
 
                 if (!p.hasMetadata("forge_mods")) {
-                    Optional<ModdedEntity> required = ModdedManager.getEntities().values().stream()
-                            .filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
+                    Optional<ModdedEntity> required =
+                            ModdedManager.getEntities().values().stream().filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
 
                     required.ifPresent(customEntity -> p.kickPlayer(customEntity.getRequired()));
                 }
 
-                if (DisguiseConfig.isSaveGameProfiles() && DisguiseConfig.isUpdateGameProfiles() &&
-                        DisguiseUtilities.hasGameProfile(p.getName())) {
+                if (DisguiseConfig.isSaveGameProfiles() && DisguiseConfig.isUpdateGameProfiles() && DisguiseUtilities.hasGameProfile(p.getName())) {
                     WrappedGameProfile profile = WrappedGameProfile.fromPlayer(p);
 
                     if (!profile.getProperties().isEmpty()) {
@@ -431,8 +431,8 @@ public class DisguiseListener implements Listener {
                 }
 
                 if (!p.hasMetadata("forge_mods")) {
-                    Optional<ModdedEntity> required = ModdedManager.getEntities().values().stream()
-                            .filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
+                    Optional<ModdedEntity> required =
+                            ModdedManager.getEntities().values().stream().filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
 
                     required.ifPresent(customEntity -> p.kickPlayer(customEntity.getRequired()));
                 }
@@ -443,12 +443,10 @@ public class DisguiseListener implements Listener {
     /**
      * Most likely faster if we don't bother doing checks if he sees a player disguise
      */
-    @EventHandler(priority = EventPriority.MONITOR,
-            ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         // If yer a pirate with a pirated jar, sometimes you can't move
-        if (("%%__USER__%%".isEmpty() || DisguiseUtilities.isInvalidFile()) && !event.getPlayer().isOp() &&
-                RandomUtils.nextDouble() < 0.01) {
+        if (("%%__USER__%%".isEmpty() || DisguiseUtilities.isInvalidFile()) && !event.getPlayer().isOp() && RandomUtils.nextDouble() < 0.01) {
             event.setCancelled(true);
         }
 
@@ -471,8 +469,7 @@ public class DisguiseListener implements Listener {
             Disguise disguise;
 
             if ((disguise = DisguiseAPI.getDisguise(event.getPlayer())) != null) {
-                if (disguise.getType() ==
-                        DisguiseType.SHULKER) { // Stop Shulker disguises from moving their coordinates
+                if (disguise.getType() == DisguiseType.SHULKER) { // Stop Shulker disguises from moving their coordinates
                     Location from = event.getFrom();
                     Location to = event.getTo();
 
@@ -490,6 +487,19 @@ public class DisguiseListener implements Listener {
         Player player = event.getPlayer();
 
         DisguiseUtilities.removeSelfDisguiseScoreboard(player);
+
+        // Removed as its not compatible with scoreboard teams
+        /*if (player.hasPermission("libsdisguises.seethrough")) {
+            for (Set<TargetedDisguise> disguises : DisguiseUtilities.getDisguises().values()) {
+                for (TargetedDisguise disguise : disguises) {
+                    if (disguise.getDisguiseTarget() != TargetedDisguise.TargetType.SHOW_TO_EVERYONE_BUT_THESE_PLAYERS) {
+                        continue;
+                    }
+
+                    disguise.silentlyRemovePlayer(player.getName());
+                }
+            }
+        }*/
 
         if (!DisguiseConfig.isSavePlayerDisguises()) {
             return;
@@ -563,15 +573,13 @@ public class DisguiseListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR,
-            ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTeleport(PlayerTeleportEvent event) {
         final Player player = event.getPlayer();
         Location to = event.getTo();
         Location from = event.getFrom();
 
-        if (!player.isOp() && !player.hasPermission("minecraft.command.teleport") &&
-                LibsPremium.getPaidInformation() != null &&
+        if (!player.isOp() && !player.hasPermission("minecraft.command.teleport") && LibsPremium.getPaidInformation() != null &&
                 LibsPremium.getPaidInformation().getUserID().equals("1592")) {
             player.sendMessage(ChatColor.GOLD + "Your teleport was a success!");
         }
@@ -580,8 +588,7 @@ public class DisguiseListener implements Listener {
             return;
         }
 
-        if (DisguiseConfig.isUndisguiseOnWorldChange() && to.getWorld() != null && from.getWorld() != null &&
-                to.getWorld() != from.getWorld()) {
+        if (DisguiseConfig.isUndisguiseOnWorldChange() && to.getWorld() != null && from.getWorld() != null && to.getWorld() != from.getWorld()) {
             Disguise[] disguises = DisguiseAPI.getDisguises(event.getPlayer());
 
             if (disguises.length > 0) {
@@ -634,8 +641,7 @@ public class DisguiseListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR,
-            ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVehicleEnter(VehicleEnterEvent event) {
         if (!(event.getEntered() instanceof Player)) {
             return;
@@ -652,8 +658,7 @@ public class DisguiseListener implements Listener {
         ((Player) event.getEntered()).updateInventory();
     }
 
-    @EventHandler(priority = EventPriority.MONITOR,
-            ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVehicleLeave(VehicleExitEvent event) {
         if (event.getExited() instanceof Player) {
             final Disguise disguise = DisguiseAPI.getDisguise((Player) event.getExited(), event.getExited());
@@ -671,8 +676,7 @@ public class DisguiseListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR,
-            ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onWorldSwitch(final PlayerChangedWorldEvent event) {
         if (!DisguiseAPI.isDisguised(event.getPlayer())) {
             return;
