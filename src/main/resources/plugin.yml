@@ -6,7 +6,7 @@ build-date: ${timestamp}
 build-number: ${build.number}
 author: libraryaddict
 authors: [Byteflux, Navid K.]
-softdepend: [ProtocolLib]
+softdepend: [ProtocolLib, LibsDisguisesVersioning]
 api-version: '1.13'
 commands:
   libsdisguises:
@@ -115,6 +115,8 @@ permissions:
     description: Allows the command user to set names on different heights
   libsdisguises.grabhead:
     description: Allows the command user to use /grabhead
+  libsdisguises.ratelimitbypass:
+    description: Allows a living player to bypass the 500ms rate limit on disguise commands, used to prevent crashes
   libsdisguises.seecmd:
     description: See all commands in tab-completion
     default: true

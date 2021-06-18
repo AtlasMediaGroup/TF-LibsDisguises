@@ -1,6 +1,8 @@
 package me.libraryaddict.disguise.utilities.mineskin;
 
 import com.google.gson.Gson;
+import lombok.Getter;
+import lombok.Setter;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.SkinUtils;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
@@ -32,6 +34,12 @@ public class MineSkinAPI {
      */
     private long nextRequest;
     private final ReentrantLock lock = new ReentrantLock();
+    @Getter
+    @Setter
+    private boolean debugging;
+    @Getter
+    @Setter
+    private String apiKey;
 
     public boolean isInUse() {
         return lock.isLocked();
@@ -56,12 +64,32 @@ public class MineSkinAPI {
         return doPost(callback, "/generate/url", url, null, modelType);
     }
 
+    private void printDebug(String message) {
+        if (!isDebugging()) {
+            return;
+        }
+
+        System.out.println("[MineSkinAPI] " + message);
+    }
+
     private MineSkinResponse doPost(SkinUtils.SkinCallback callback, String path, String skinUrl, File file, SkinUtils.ModelType modelType) {
         lock.lock();
 
         long sleep = nextRequest - System.currentTimeMillis();
 
+        if (file != null) {
+            printDebug("Grabbing a skin from file at " + file.getPath());
+        } else if (skinUrl != null) {
+            printDebug("Grabbing a skin from url '" + skinUrl + "'");
+        }
+
+        if (getApiKey() != null) {
+            printDebug("Using a MineSkin api key!");
+        }
+
         if (sleep > 0) {
+            printDebug("Sleeping for " + sleep + "ms before calling the API due to a recent request");
+
             try {
                 Thread.sleep(sleep);
             } catch (InterruptedException e) {
@@ -73,15 +101,20 @@ public class MineSkinAPI {
         long nextRequestIn = TimeUnit.SECONDS.toMillis(10);
 
         try {
+            if (getApiKey() != null) {
+                path += (path.contains("?") ? '&' : '?') + "key=" + getApiKey();
+            }
+
             URL url = new URL("https://api.mineskin.org" + path);
             // Creating a connection
             connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("User-Agent", "LibsDisguises");
             connection.setConnectTimeout(19000);
             connection.setReadTimeout(19000);
-
-            String boundary = Long.toHexString(System.currentTimeMillis()); // Just generate some unique random value.
             connection.setDoOutput(true);
+
+            connection.setRequestProperty("User-Agent", "LibsDisguises");
+
+            String boundary = "LD@" + Long.toHexString(System.currentTimeMillis()); // Just generate some unique random value.
             connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
 
             String charset = "UTF-8";
@@ -121,9 +154,15 @@ public class MineSkinAPI {
                 writer.append("--").append(boundary).append("--").append(CRLF).flush();
             }
 
+            printDebug("Received status code: " + connection.getResponseCode());
+
             if (connection.getResponseCode() == 500) {
-                APIError error = new Gson().fromJson(new BufferedReader(new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8)).lines()
-                        .collect(Collectors.joining("\n")), APIError.class);
+                String errorMessage = new BufferedReader(new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8)).lines()
+                        .collect(Collectors.joining("\n"));
+
+                APIError error = new Gson().fromJson(errorMessage, APIError.class);
+
+                printDebug("Received error: " + errorMessage);
 
                 if (error.code == 403) {
                     callback.onError(LibsMsg.SKIN_API_FAIL_CODE, "" + error.code, LibsMsg.SKIN_API_403.get());
@@ -156,6 +195,8 @@ public class MineSkinAPI {
                 // Read it to string
                 String response = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
 
+                printDebug("Received: " + response);
+
                 MineSkinResponse skinResponse = new Gson().fromJson(response, MineSkinResponse.class);
 
                 nextRequestIn = (long) (skinResponse.getNextRequest() * 1000);
@@ -163,19 +204,31 @@ public class MineSkinAPI {
                 return skinResponse;
             }
         } catch (SocketTimeoutException ex) {
+            if (isDebugging()) {
+                ex.printStackTrace();
+            }
+
             callback.onError(skinUrl == null ? LibsMsg.SKIN_API_TIMEOUT_ERROR : LibsMsg.SKIN_API_IMAGE_TIMEOUT);
             return null;
         } catch (Exception ex) {
             try {
                 if (connection != null && (connection.getResponseCode() == 524 || connection.getResponseCode() == 408 || connection.getResponseCode() == 504 ||
                         connection.getResponseCode() == 599)) {
-                    callback.onError(LibsMsg.SKIN_API_TIMEOUT_ERROR);
+                    if (getApiKey() != null && connection.getResponseCode() == 504) {
+                        callback.onError(LibsMsg.SKIN_API_TIMEOUT_API_KEY_ERROR);
+                    } else {
+                        callback.onError(LibsMsg.SKIN_API_TIMEOUT_ERROR);
+                    }
+
                     return null;
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
 
-            DisguiseUtilities.getLogger().warning("Failed to access MineSkin.org");
+            if (DisguiseUtilities.getLogger() != null) {
+                DisguiseUtilities.getLogger().warning("Failed to access MineSkin.org");
+            }
+
             ex.printStackTrace();
 
             callback.onError(LibsMsg.SKIN_API_FAIL);
@@ -231,7 +284,9 @@ public class MineSkinAPI {
                 throw new IllegalArgumentException();
             }
 
-            DisguiseUtilities.getLogger().warning("Failed to access MineSkin.org");
+            if (DisguiseUtilities.getLogger() != null) {
+                DisguiseUtilities.getLogger().warning("Failed to access MineSkin.org");
+            }
             ex.printStackTrace();
         } finally {
             nextRequest = System.currentTimeMillis() + nextRequestIn + 1000;

@@ -30,6 +30,7 @@ import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
 import java.io.*;
@@ -93,6 +94,7 @@ public class ReflectionManager {
     private static Method craftBlockDataGetState;
     private static Method getOldItemAsBlock;
     private static Method magicGetBlock;
+    private static Method magicGetMaterial;
     private static Method getNmsItem;
     private static Method getBlockData;
     private static Method getBlockDataAsId;
@@ -159,6 +161,7 @@ public class ReflectionManager {
             if (NmsVersion.v1_13.isSupported()) {
                 craftBlockDataGetState = getCraftMethod("block.data.CraftBlockData", "getState");
                 magicGetBlock = getCraftMethod("util.CraftMagicNumbers", "getBlock", Material.class);
+                magicGetMaterial = getCraftMethod("util.CraftMagicNumbers", "getMaterial", getNmsClass("Block"));
                 entityTypesAMethod = getNmsMethod("EntityTypes", "a", String.class);
 
                 if (NmsVersion.v1_14.isSupported()) {
@@ -690,7 +693,8 @@ public class ReflectionManager {
 
     public static WrappedGameProfile getGameProfile(UUID uuid, String playerName) {
         try {
-            return new WrappedGameProfile(uuid != null ? uuid : getRandomUUID(), playerName);
+            return new WrappedGameProfile(uuid != null ? uuid : getRandomUUID(),
+                    playerName == null || playerName.length() < 17 ? playerName : playerName.substring(0, 16));
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -703,7 +707,8 @@ public class ReflectionManager {
 
     public static WrappedGameProfile getGameProfileWithThisSkin(UUID uuid, String playerName, WrappedGameProfile profileWithSkin) {
         try {
-            WrappedGameProfile gameProfile = new WrappedGameProfile(uuid != null ? uuid : getRandomUUID(), playerName);
+            WrappedGameProfile gameProfile = new WrappedGameProfile(uuid != null ? uuid : getRandomUUID(),
+                    playerName == null || playerName.length() < 17 ? playerName : playerName.substring(0, 16));
 
             if (profileWithSkin != null) {
                 gameProfile.getProperties().putAll(profileWithSkin.getProperties());
@@ -1089,6 +1094,8 @@ public class ReflectionManager {
             return getNmsClass("IChatBaseComponent");
         } else if (Vector3F.class.isAssignableFrom(cl)) {
             return getNmsClass("Vector3f");
+        } else if (EulerAngle.class.isAssignableFrom(cl)) {
+            return getNmsClass("Vector3f");
         } else if (Direction.class.isAssignableFrom(cl)) {
             return getNmsClass("EnumDirection");
         } else if (WrappedParticle.class.isAssignableFrom(cl)) {
@@ -1149,6 +1156,14 @@ public class ReflectionManager {
 
             try {
                 return vector3FConstructor.newInstance(angle.getX(), angle.getY(), angle.getZ());
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        } else if (value instanceof EulerAngle) {
+            EulerAngle angle = (EulerAngle) value;
+
+            try {
+                return vector3FConstructor.newInstance((float) angle.getX(), (float) angle.getY(), (float) angle.getZ());
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -1515,17 +1530,11 @@ public class ReflectionManager {
 
     public static int getCombinedIdByItemStack(ItemStack itemStack) {
         try {
-            Object nmsBlock;
-
-            if (NmsVersion.v1_13.isSupported()) {
-                nmsBlock = magicGetBlock.invoke(null, itemStack.getType());
-            } else {
-                Object nmsItem = getNmsItem(itemStack);
-
-                Object item = getNmsItem.invoke(nmsItem);
-
-                nmsBlock = getOldItemAsBlock.invoke(null, item);
+            if (!NmsVersion.v1_13.isSupported()) {
+                return itemStack.getType().ordinal() + (itemStack.getDurability() << 12);
             }
+
+            Object nmsBlock = magicGetBlock.invoke(null, itemStack.getType());
 
             Object iBlockData = getBlockData.invoke(nmsBlock);
 
@@ -1555,12 +1564,17 @@ public class ReflectionManager {
         try {
             Method idMethod = getNmsMethod("Block", "getByCombinedId", int.class);
             Object iBlockData = idMethod.invoke(null, id);
+
             Class iBlockClass = getNmsClass("IBlockData");
 
-            Method getBlock = getNmsMethod(iBlockClass, "getBlock");
+            Method getBlock = getNmsMethod(NmsVersion.v1_16.isSupported() ? iBlockClass.getSuperclass() : iBlockClass, "getBlock");
             Object block = getBlock.invoke(iBlockData);
 
-            Method getItem = getNmsMethod("Block", "t", iBlockClass);
+            if (NmsVersion.v1_13.isSupported()) {
+                return new ItemStack((Material) magicGetMaterial.invoke(null, block));
+            }
+
+            Method getItem = getNmsMethod("Block", "u", iBlockClass);
 
             return getBukkitItem(getItem.invoke(block, iBlockData));
         } catch (Exception ex) {
@@ -1713,7 +1727,7 @@ public class ReflectionManager {
         }
     }
 
-    public static byte[] readFully(InputStream input) throws IOException {
+    public static byte[] readFuzzyFully(InputStream input) throws IOException {
         byte[] buffer = new byte[8192];
         int bytesRead;
         ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -1895,7 +1909,7 @@ public class ReflectionManager {
 
             for (MetaIndex index : indexes) {
                 DisguiseUtilities.getLogger()
-                        .warning(disguiseType + " has MetaIndex remaining! " + index.getFlagWatcher().getSimpleName() + " at index " + index.getIndex());
+                        .severe(disguiseType + " has MetaIndex remaining! " + index.getFlagWatcher().getSimpleName() + " at index " + index.getIndex());
             }
 
             SoundGroup sound = SoundGroup.getGroup(disguiseType.name());

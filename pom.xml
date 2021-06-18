@@ -5,7 +5,7 @@
     <!-- A good example on why temporary names for project identification shouldn't be used -->
     <groupId>LibsDisguises</groupId>
     <artifactId>LibsDisguises</artifactId>
-    <version>10.0.24-SNAPSHOT</version>
+    <version>10.0.25</version>
 
     <build>
         <defaultGoal>exec:java clean install</defaultGoal>
@@ -16,8 +16,14 @@
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
                 <includes>
-                    <include>*</include>
-                    <include>configs/*</include>
+                    <include>plugin.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*</include>
                 </includes>
             </resource>
             <resource>
@@ -69,6 +75,7 @@
         <junit.version>4.13.1</junit.version>
         <paper-api.version>[1.16,]</paper-api.version>
         <bungeecord-chat.version>1.12-SNAPSHOT</bungeecord-chat.version>
+        <adventure.version>4.1.0-SNAPSHOT</adventure.version>
     </properties>
 
     <dependencies>
@@ -122,6 +129,11 @@
             <artifactId>bungeecord-chat</artifactId>
             <version>${bungeecord-chat.version}</version>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-minimessage</artifactId>
+            <version>${adventure.version}</version>
         </dependency>
     </dependencies>
 

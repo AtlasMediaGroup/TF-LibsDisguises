@@ -18,7 +18,6 @@ import lombok.Getter;
 import lombok.Setter;
 import me.libraryaddict.disguise.DisguiseAPI;
 import me.libraryaddict.disguise.DisguiseConfig;
-import me.libraryaddict.disguise.DisguiseConfig.DisguisePushing;
 import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.disguisetypes.*;
 import me.libraryaddict.disguise.disguisetypes.TargetedDisguise.TargetType;
@@ -29,12 +28,16 @@ import me.libraryaddict.disguise.utilities.json.*;
 import me.libraryaddict.disguise.utilities.mineskin.MineSkinAPI;
 import me.libraryaddict.disguise.utilities.packets.LibsPackets;
 import me.libraryaddict.disguise.utilities.packets.PacketsManager;
+import me.libraryaddict.disguise.utilities.parser.DisguiseParser;
 import me.libraryaddict.disguise.utilities.reflection.FakeBoundingBox;
 import me.libraryaddict.disguise.utilities.reflection.LibsProfileLookup;
 import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
 import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import me.libraryaddict.disguise.utilities.watchers.CompileMethods;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -119,20 +122,23 @@ public class DisguiseUtilities {
                 team.setOption(Option.NAME_TAG_VISIBILITY, nameVisible ? OptionStatus.ALWAYS : OptionStatus.NEVER);
             }
 
-            ChatColor color = disguise.getWatcher().getGlowColor();
-
-            if (color == null) {
-                color = ChatColor.WHITE;
+            if (DisguiseConfig.isModifyCollisions() && team.getOption(Option.COLLISION_RULE) != OptionStatus.NEVER) {
+                team.setOption(Option.COLLISION_RULE, OptionStatus.NEVER);
             }
 
-            team.setColor(color);
+            if (disguise.getWatcher().getGlowColor() != null && disguise.getWatcher().getGlowColor() != team.getColor()) {
+                team.setColor(disguise.getWatcher().getGlowColor());
+            }
 
-            if (NmsVersion.v1_13.isSupported()) {
-                team.setPrefix("Colorize");
-                team.setSuffix("Colorize");
-            } else {
-                team.setPrefix(getPrefix());
-                team.setSuffix(getSuffix());
+            String prefix = NmsVersion.v1_13.isSupported() ? "Colorize" : getPrefix();
+            String suffix = NmsVersion.v1_13.isSupported() ? "Colorize" : getSuffix();
+
+            if (!prefix.equals(team.getPrefix())) {
+                team.setPrefix(prefix);
+            }
+
+            if (!suffix.equals(team.getSuffix())) {
+                team.setSuffix(suffix);
             }
         }
     }
@@ -164,8 +170,6 @@ public class DisguiseUtilities {
     private static final HashMap<String, ArrayList<Object>> runnables = new HashMap<>();
     @Getter
     private static final HashSet<UUID> selfDisguised = new HashSet<>();
-    private static final HashMap<UUID, String> preDisguiseTeam = new HashMap<>();
-    private static final HashMap<UUID, String> disguiseTeam = new HashMap<>();
     private static final File profileCache = new File("plugins/LibsDisguises/SavedSkins");
     private static final File savedDisguises = new File("plugins/LibsDisguises/SavedDisguises");
     @Getter
@@ -193,6 +197,55 @@ public class DisguiseUtilities {
     private static long lastSavedPreferences;
     @Getter
     private final static ConcurrentHashMap<String, DScoreTeam> teams = new ConcurrentHashMap<>();
+    private final static boolean java16;
+    private static boolean criedOverJava16;
+    private static HashSet<UUID> warnedSkin = new HashSet<>();
+    private static Boolean adventureTextSupport;
+
+    static {
+        final Matcher matcher = Pattern.compile("(?:1\\.)?(\\d+)").matcher(System.getProperty("java.version"));
+
+        if (!matcher.find()) {
+            java16 = true;
+        } else {
+            int vers = 16;
+
+            try {
+                vers = Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException ignored) {
+            }
+
+            java16 = vers >= 16;
+        }
+    }
+
+    public static boolean hasAdventureTextSupport() {
+        if (adventureTextSupport == null) {
+            try {
+                Class.forName("net.kyori.adventure.text.minimessage.MiniMessage");
+                adventureTextSupport = true;
+            } catch (ClassNotFoundException ex) {
+                adventureTextSupport = false;
+            }
+        }
+
+        return adventureTextSupport;
+    }
+
+    public static void doSkinUUIDWarning(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            return;
+        }
+
+        UUID uuid = ((Player) sender).getUniqueId();
+
+        if (uuid.version() == 4 || warnedSkin.contains(uuid)) {
+            return;
+        }
+
+        warnedSkin.add(uuid);
+        LibsMsg.SKIN_API_UUID_3.send(sender);
+    }
 
     /**
      * Only allow saves every 2 minutes
@@ -236,17 +289,19 @@ public class DisguiseUtilities {
             team = ((Player) player).getScoreboard().getEntryTeam(((Player) player).getUniqueId().toString());
         }
 
+        String name;
+
         if (team == null || (StringUtils.isEmpty(team.getPrefix()) && StringUtils.isEmpty(team.getSuffix()))) {
-            String name = ((Player) player).getDisplayName();
+            name = ((Player) player).getDisplayName();
 
             if (name.equals(player.getName())) {
-                return ((Player) player).getPlayerListName();
+                name = ((Player) player).getPlayerListName();
             }
-
-            return name;
+        } else {
+            name = team.getPrefix() + team.getColor() + player.getName() + team.getSuffix();
         }
 
-        return team.getPrefix() + team.getColor() + player.getName() + team.getSuffix();
+        return name.replaceAll("§x§([0-9a-fA-F])§([0-9a-fA-F])§([0-9a-fA-F])§([0-9a-fA-F])§([0-9a-fA-F])§([0-9a-fA-F])", "<#$1$2$3$4$5$6>");
     }
 
     public static String getDisplayName(String playerName) {
@@ -558,7 +613,7 @@ public class DisguiseUtilities {
         Disguise disguise = DisguiseAPI.getDisguise(player, toClone);
 
         if (disguise == null) {
-            disguise = DisguiseAPI.constructDisguise(toClone, options[0], options[1], options[2]);
+            disguise = DisguiseAPI.constructDisguise(toClone, options[0], options[1]);
         } else {
             disguise = disguise.clone();
         }
@@ -606,19 +661,19 @@ public class DisguiseUtilities {
                     disguiseFile.delete();
                 }
             } else {
-                Disguise[] disguises = new Disguise[disguise.length];
-
-                for (int i = 0; i < disguise.length; i++) {
-                    Disguise dis = disguise[i].clone();
-                    dis.setEntity(null);
-
-                    disguises[i] = dis;
-                }
 
                 // I hear pirates don't obey standards
                 @SuppressWarnings("MismatchedStringCase")
                 PrintWriter writer = new PrintWriter(disguiseFile, "12345".equals("%%__USER__%%") ? "US-ASCII" : "UTF-8");
-                writer.write(gson.toJson(disguises));
+
+                for (int i = 0; i < disguise.length; i++) {
+                    writer.write(DisguiseParser.parseToString(disguise[i], true, true));
+
+                    if (i + 1 < disguise.length) {
+                        writer.write("\n");
+                    }
+                }
+
                 writer.close();
 
                 savedDisguiseList.add(owningEntity);
@@ -661,14 +716,36 @@ public class DisguiseUtilities {
                 removeSavedDisguise(entityUUID);
             }
 
-            Disguise[] disguises = gson.fromJson(cached, Disguise[].class);
+            Disguise[] disguises;
+
+            if (cached.isEmpty()) {
+                return new Disguise[0];
+            }
+
+            if (Character.isAlphabetic(cached.charAt(0))) {
+                String[] spl = cached.split("\n");
+                disguises = new Disguise[spl.length];
+
+                for (int i = 0; i < disguises.length; i++) {
+                    disguises[i] = DisguiseParser.parseDisguise(spl[i]);
+                }
+            } else if (!java16) {
+                disguises = gson.fromJson(cached, Disguise[].class);
+            } else {
+                if (!criedOverJava16) {
+                    criedOverJava16 = true;
+                    getLogger().warning("Failed to load a disguise using old format, this is due to Java 16 breaking stuff. This error will only print once.");
+                }
+
+                return new Disguise[0];
+            }
 
             if (disguises == null) {
                 return new Disguise[0];
             }
 
             return disguises;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             getLogger().severe("Malformed disguise for " + entityUUID);
             e.printStackTrace();
         }
@@ -715,24 +792,26 @@ public class DisguiseUtilities {
         if (!getDisguises().containsKey(entityId)) {
             getDisguises().put(entityId, new HashSet<>());
 
-            synchronized (isNoInteract) {
-                Entity entity = disguise.getEntity();
+            if (disguise.getEntity() != null) {
+                synchronized (isNoInteract) {
+                    Entity entity = disguise.getEntity();
 
-                switch (entity.getType()) {
-                    case EXPERIENCE_ORB:
-                    case DROPPED_ITEM:
-                    case ARROW:
-                    case SPECTRAL_ARROW:
-                        isNoInteract.add(entity.getEntityId());
-                        break;
-                    default:
-                        break;
+                    switch (entity.getType()) {
+                        case EXPERIENCE_ORB:
+                        case DROPPED_ITEM:
+                        case ARROW:
+                        case SPECTRAL_ARROW:
+                            isNoInteract.add(entity.getEntityId());
+                            break;
+                        default:
+                            break;
+                    }
                 }
-            }
 
-            synchronized (isSpecialInteract) {
-                if (disguise.getEntity() instanceof Wolf && disguise.getType() != DisguiseType.WOLF) {
-                    isSpecialInteract.add(entityId);
+                synchronized (isSpecialInteract) {
+                    if (disguise.getEntity() instanceof Wolf && disguise.getType() != DisguiseType.WOLF) {
+                        isSpecialInteract.add(entityId);
+                    }
                 }
             }
         }
@@ -771,7 +850,8 @@ public class DisguiseUtilities {
         }
 
         for (TargetedDisguise disguise : getFutureDisguises().remove(entity.getEntityId())) {
-            addDisguise(entity.getEntityId(), disguise);
+            disguise.setEntity(entity);
+            disguise.startDisguise();
         }
     }
 
@@ -1318,6 +1398,7 @@ public class DisguiseUtilities {
 
             registerAllExtendedNames(board);
             registerNoName(board);
+            registerColors(board);
         }
 
         if (NmsVersion.v1_13.isSupported()) {
@@ -1705,8 +1786,6 @@ public class DisguiseUtilities {
             ex.printStackTrace();
         }
 
-        removeSelfDisguiseScoreboard(player);
-
         // player.spigot().setCollidesWithEntities(true);
         // Finish up
         // Remove the fake entity ID from the disguise bin
@@ -1875,6 +1954,61 @@ public class DisguiseUtilities {
         }
     }
 
+    public static void setGlowColor(UUID uuid, ChatColor color) {
+        String name = color == null ? "" : getTeamName(color);
+
+        for (Scoreboard scoreboard : getAllScoreboards()) {
+            Team team = scoreboard.getEntryTeam(uuid.toString());
+
+            if (team != null) {
+                if (!team.getName().startsWith("LD_Color_") || name.equals(team.getName())) {
+                    continue;
+                }
+
+                team.removeEntry(uuid.toString());
+            }
+
+            if (color == null) {
+                continue;
+            }
+
+            team = scoreboard.getTeam(name);
+
+            if (team == null) {
+                continue;
+            }
+
+            team.addEntry(uuid.toString());
+        }
+    }
+
+    public static void setGlowColor(Disguise disguise, ChatColor color) {
+        setGlowColor(disguise.getUUID(), color);
+    }
+
+    public static String getTeamName(ChatColor color) {
+        return "LD_Color_" + color.getChar();
+    }
+
+    public static void registerColors(Scoreboard scoreboard) {
+        for (ChatColor color : ChatColor.values()) {
+            if (!color.isColor()) {
+                continue;
+            }
+
+            String name = getTeamName(color);
+
+            Team team = scoreboard.getTeam(name);
+
+            if (team == null) {
+                team = scoreboard.registerNewTeam(name);
+            }
+
+            team.setColor(color);
+            team.setOption(Option.COLLISION_RULE, OptionStatus.NEVER);
+        }
+    }
+
     public static String[] getExtendedNameSplit(String playerName, String name) {
         if (name.length() <= 16 && !DisguiseConfig.isScoreboardNames()) {
             throw new IllegalStateException("This can only be used for names longer than 16 characters!");
@@ -2012,144 +2146,6 @@ public class DisguiseUtilities {
 
     private static boolean isValidPlayerName(Scoreboard board, String name) {
         return board.getEntryTeam(name) == null && Bukkit.getPlayerExact(name) == null;
-    }
-
-    public static void removeSelfDisguiseScoreboard(Player player) {
-        String originalTeam = preDisguiseTeam.remove(player.getUniqueId());
-        String teamDisguise = disguiseTeam.remove(player.getUniqueId());
-
-        if (teamDisguise == null || DisguiseConfig.getPushingOption() == DisguisePushing.IGNORE_SCOREBOARD) {
-            return;
-        }
-
-        // Code replace them back onto their original scoreboard team
-        Scoreboard scoreboard = player.getScoreboard();
-        Team team = originalTeam == null ? null : scoreboard.getTeam(originalTeam);
-        Team ldTeam = null;
-
-        for (Team t : scoreboard.getTeams()) {
-            if (!t.hasEntry(player.getName())) {
-                continue;
-            }
-
-            ldTeam = t;
-            break;
-        }
-
-        if (DisguiseConfig.isWarnScoreboardConflict()) {
-            if (ldTeam == null || !ldTeam.getName().equals(teamDisguise)) {
-                getLogger().warning("Scoreboard conflict, the self disguise player was not on the expected team!");
-            } else {
-                OptionStatus collisions = ldTeam.getOption(Option.COLLISION_RULE);
-
-                if (collisions != OptionStatus.NEVER && collisions != OptionStatus.FOR_OTHER_TEAMS) {
-                    getLogger().warning("Scoreboard conflict, the collisions for a self disguise player team has been " + "unexpectedly modifed!");
-                }
-            }
-        }
-
-        if (ldTeam != null) {
-            if (!ldTeam.getName().equals("LD_Pushing") && !ldTeam.getName().endsWith("_LDP")) {
-                // Its not a team assigned by Lib's Disguises
-                ldTeam = null;
-            }
-        }
-
-        if (team != null) {
-            team.addEntry(player.getName());
-        } else if (ldTeam != null) {
-            ldTeam.removeEntry(player.getName());
-        }
-
-        if (ldTeam != null && ldTeam.getEntries().isEmpty()) {
-            ldTeam.unregister();
-        }
-    }
-
-    public static void setupSelfDisguiseScoreboard(Player player) {
-        // They're already in a disguise team
-        if (disguiseTeam.containsKey(player.getUniqueId())) {
-            return;
-        }
-
-        if ((LibsPremium.getPluginInformation() != null && LibsPremium.getPluginInformation().isPremium() && !LibsPremium.getPluginInformation().isLegit()) ||
-                (LibsPremium.getPaidInformation() != null && !LibsPremium.getPaidInformation().isLegit())) {
-            return;
-        }
-
-        DisguisePushing pOption = DisguiseConfig.getPushingOption();
-
-        if (pOption == DisguisePushing.IGNORE_SCOREBOARD) {
-            return;
-        }
-
-        // Code to stop player pushing
-        Scoreboard scoreboard = player.getScoreboard();
-        Team prevTeam = null;
-        Team ldTeam = null;
-        String ldTeamName = "LD_Pushing";
-
-        for (Team t : scoreboard.getTeams()) {
-            if (!t.hasEntry(player.getName())) {
-                continue;
-            }
-
-            prevTeam = t;
-            break;
-        }
-
-        // If the player is in a team already and the team isn't one controlled by Lib's Disguises
-        if (prevTeam != null && !(prevTeam.getName().equals("LD_Pushing") || prevTeam.getName().endsWith("_LDP"))) {
-            // If we're creating a scoreboard
-            if (pOption == DisguisePushing.CREATE_SCOREBOARD) {
-                // Remember his old team so we can give him it back later
-                preDisguiseTeam.put(player.getUniqueId(), prevTeam.getName());
-            } else {
-                // We're modifying the scoreboard
-                ldTeam = prevTeam;
-            }
-        } else {
-            prevTeam = null;
-        }
-
-        // If we are creating a new scoreboard because the current one must not be modified
-        if (pOption == DisguisePushing.CREATE_SCOREBOARD) {
-            // If they have a team, we'll reuse that name. Otherwise go for another name
-            ldTeamName = (prevTeam == null ? "NoTeam" : prevTeam.getName());
-
-            // Give the teamname a custom name
-            ldTeamName = ldTeamName.substring(0, Math.min(12, ldTeamName.length())) + "_LDP";
-        }
-
-        if (ldTeam == null && (ldTeam = scoreboard.getTeam(ldTeamName)) == null) {
-            ldTeam = scoreboard.registerNewTeam(ldTeamName);
-        }
-
-        disguiseTeam.put(player.getUniqueId(), ldTeam.getName());
-
-        if (!ldTeam.hasEntry(player.getName())) {
-            ldTeam.addEntry(player.getName());
-        }
-
-        if (pOption == DisguisePushing.CREATE_SCOREBOARD && prevTeam != null) {
-            ldTeam.setAllowFriendlyFire(prevTeam.allowFriendlyFire());
-            ldTeam.setCanSeeFriendlyInvisibles(prevTeam.canSeeFriendlyInvisibles());
-            ldTeam.setDisplayName(prevTeam.getDisplayName());
-            ldTeam.setPrefix(prevTeam.getPrefix());
-            ldTeam.setSuffix(prevTeam.getSuffix());
-
-            for (Option option : Team.Option.values()) {
-                ldTeam.setOption(option, prevTeam.getOption(option));
-            }
-        }
-
-        if (ldTeam.getOption(Option.COLLISION_RULE) != OptionStatus.NEVER && DisguiseConfig.isModifyCollisions()) {
-            ldTeam.setOption(Option.COLLISION_RULE, OptionStatus.NEVER);
-        }
-
-        if (ldTeam.canSeeFriendlyInvisibles() && DisguiseConfig.isDisableFriendlyInvisibles()) {
-            ldTeam.setCanSeeFriendlyInvisibles(false);
-        }
     }
 
     /**
@@ -2354,8 +2350,6 @@ public class DisguiseUtilities {
                 return;
             }
 
-            setupSelfDisguiseScoreboard(player);
-
             // Check for code differences in PaperSpigot vs Spigot
             if (!runningPaper) {
                 // Add himself to his own entity tracker
@@ -2444,16 +2438,16 @@ public class DisguiseUtilities {
     }
 
     public static void sendMessage(CommandSender sender, String message) {
+        if (message.isEmpty()) {
+            return;
+        }
+
         if (!NmsVersion.v1_16.isSupported()) {
-            if (!message.isEmpty()) {
-                sender.sendMessage(message);
-            }
+            sender.sendMessage(message);
         } else {
             BaseComponent[] components = getColoredChat(message);
 
-            if (components.length > 0) {
-                sender.spigot().sendMessage(components);
-            }
+            sender.spigot().sendMessage(components);
         }
     }
 
@@ -2531,12 +2525,28 @@ public class DisguiseUtilities {
         return builder.toString();
     }
 
+    public static String translateAlternateColorCodes(String string) {
+        if (NmsVersion.v1_16.isSupported()) {
+            string = string.replaceAll("&(?=#[0-9a-fA-F]{6})", ChatColor.COLOR_CHAR + "");
+        }
+
+        return ChatColor.translateAlternateColorCodes('&', string);
+    }
+
+    public static Component getAdventureChat(String message) {
+        return MiniMessage.get().parse(message);
+    }
+
     /**
      * Modification of TextComponent.fromLegacyText
      */
     public static BaseComponent[] getColoredChat(String message) {
         if (message.isEmpty()) {
             return new BaseComponent[0];
+        }
+
+        if (hasAdventureTextSupport()) {
+            return ComponentSerializer.parse(GsonComponentSerializer.gson().serialize(getAdventureChat(message)));
         }
 
         ArrayList<BaseComponent> components = new ArrayList();
@@ -2548,23 +2558,20 @@ public class DisguiseUtilities {
             char c = message.charAt(i);
             TextComponent old;
 
-            if (c == ChatColor.COLOR_CHAR || (c == '<' && i + 9 < message.length() && NmsVersion.v1_16.isSupported() &&
-                    Pattern.matches("<#[0-9a-fA-F]{6}>", message.substring(i, i + 9)))) {
-                // If normal color char
-                if (c == ChatColor.COLOR_CHAR) {
-                    ++i;
+            if (c == ChatColor.COLOR_CHAR && i + 1 >= message.length()) {
+                break;
+            }
 
-                    if (i >= message.length()) {
-                        break;
-                    }
-                }
+            if (c == ChatColor.COLOR_CHAR || (NmsVersion.v1_16.isSupported() && c == '<' && i + 9 < message.length() &&
+                    Pattern.matches("<#[0-9a-fA-F]{6}>", message.substring(i, i + 9)))) {
+                i++;
 
                 net.md_5.bungee.api.ChatColor format;
 
-                if (c != ChatColor.COLOR_CHAR) {
-                    format = net.md_5.bungee.api.ChatColor.of(message.substring(i + 1, i + 8));
+                if (c != ChatColor.COLOR_CHAR || (message.length() - i >= 7 && Pattern.matches("#[0-9a-fA-F]{6}", message.substring(i, i + 7)))) {
+                    format = net.md_5.bungee.api.ChatColor.of(message.substring(i, i + 7));
 
-                    i += 8;
+                    i += c == '<' ? 7 : 8;
                 } else {
                     c = message.charAt(i);
 
@@ -2920,7 +2927,7 @@ public class DisguiseUtilities {
     }
 
     public static byte getPitch(DisguiseType disguiseType, byte value) {
-        if (disguiseType.isMisc()) {
+        if (disguiseType != DisguiseType.WITHER_SKULL && disguiseType.isMisc()) {
             return (byte) -value;
         }
 
@@ -3014,7 +3021,7 @@ public class DisguiseUtilities {
                 if (NmsVersion.v1_13.isSupported()) {
                     name = Optional.of(WrappedChatComponent.fromJson(ComponentSerializer.toString(DisguiseUtilities.getColoredChat(newNames[i]))));
                 } else {
-                    name = newNames[i];
+                    name = ChatColor.translateAlternateColorCodes('&', newNames[i]);
                 }
 
                 WrappedDataWatcher.WrappedDataWatcherObject obj = ReflectionManager
@@ -3054,9 +3061,9 @@ public class DisguiseUtilities {
                     } else if (index == MetaIndex.ARMORSTAND_META) {
                         val = (byte) 19;
                     } else if (index == MetaIndex.ENTITY_CUSTOM_NAME) {
-                        val = Optional.of(WrappedChatComponent.fromText(newNames[i]));
+                        val = Optional.of(WrappedChatComponent.fromJson(ComponentSerializer.toString(DisguiseUtilities.getColoredChat(newNames[i]))));
                     } else if (index == MetaIndex.ENTITY_CUSTOM_NAME_OLD) {
-                        val = newNames[i];
+                        val = ChatColor.translateAlternateColorCodes('&', newNames[i]);
                     } else if (index == MetaIndex.ENTITY_CUSTOM_NAME_VISIBLE) {
                         val = true;
                     }

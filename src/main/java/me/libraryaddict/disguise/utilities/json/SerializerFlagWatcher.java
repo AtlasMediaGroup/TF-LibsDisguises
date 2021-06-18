@@ -11,6 +11,9 @@ import me.libraryaddict.disguise.utilities.params.types.custom.ParamInfoParticle
 import me.libraryaddict.disguise.utilities.parser.DisguiseParseException;
 import org.bukkit.inventory.ItemStack;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -22,7 +25,7 @@ import java.util.Optional;
 /**
  * Created by libraryaddict on 1/06/2017.
  */
-public class SerializerFlagWatcher implements JsonDeserializer<FlagWatcher>, JsonSerializer<FlagWatcher>, InstanceCreator<FlagWatcher> {
+public class SerializerFlagWatcher implements JsonDeserializer<FlagWatcher>, InstanceCreator<FlagWatcher> {
     private Gson gson;
 
     public SerializerFlagWatcher(Gson gson) {
@@ -134,23 +137,5 @@ public class SerializerFlagWatcher implements JsonDeserializer<FlagWatcher>, Jso
         }
 
         return null;
-    }
-
-    @Override
-    public JsonElement serialize(FlagWatcher src, Type typeOfSrc, JsonSerializationContext context) {
-        JsonObject obj = (JsonObject) gson.toJsonTree(src);
-
-        obj.addProperty("flagType", src.getClass().getName());
-
-        try {
-            Method method = FlagWatcher.class.getDeclaredMethod("getDisguise");
-            method.setAccessible(true);
-            Disguise disguise = (Disguise) method.invoke(src);
-            obj.addProperty("entityType", disguise.getType().name());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-        return obj;
     }
 }

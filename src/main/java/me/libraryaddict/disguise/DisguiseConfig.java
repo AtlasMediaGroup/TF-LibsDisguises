@@ -18,7 +18,6 @@ import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import me.libraryaddict.disguise.utilities.translations.TranslateType;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -31,15 +30,11 @@ import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 public class DisguiseConfig {
-    @Getter
-    @Setter
-    private static DisguisePushing pushingOption = DisguisePushing.MODIFY_SCOREBOARD;
     @Getter
     @Setter
     private static HashMap<DisguisePerm, String> customDisguises = new HashMap<>();
@@ -88,6 +83,9 @@ public class DisguiseConfig {
     @Getter
     @Setter
     private static boolean hidingArmorFromSelf;
+    @Getter
+    @Setter
+    private static boolean hidingCreativeEquipmentFromSelf;
     @Getter
     @Setter
     private static boolean hidingHeldItemFromSelf;
@@ -465,7 +463,7 @@ public class DisguiseConfig {
 
         try {
             return new HashMap.SimpleEntry(entry.getKey(), DisguiseParser.parseDisguise(entry.getValue()));
-        } catch (IllegalAccessException | InvocationTargetException | DisguiseParseException e) {
+        } catch (Throwable e) {
             DisguiseUtilities.getLogger().warning("Error when attempting to grab the custom disguise " + disguise);
             e.printStackTrace();
         }
@@ -473,8 +471,7 @@ public class DisguiseConfig {
         return null;
     }
 
-    public static Entry<DisguisePerm, Disguise> getCustomDisguise(Entity target, String disguise)
-            throws IllegalAccessException, DisguiseParseException, InvocationTargetException {
+    public static Entry<DisguisePerm, Disguise> getCustomDisguise(Entity target, String disguise) throws Throwable {
         if (!Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("Custom Disguises should not be called async!");
         }
@@ -488,8 +485,7 @@ public class DisguiseConfig {
         return new HashMap.SimpleEntry(entry.getKey(), DisguiseParser.parseDisguise(Bukkit.getConsoleSender(), target, entry.getValue()));
     }
 
-    public static Entry<DisguisePerm, Disguise> getCustomDisguise(CommandSender invoker, Entity target, String disguise)
-            throws IllegalAccessException, DisguiseParseException, InvocationTargetException {
+    public static Entry<DisguisePerm, Disguise> getCustomDisguise(CommandSender invoker, Entity target, String disguise) throws Throwable {
         if (!Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("Custom Disguises should not be called async!");
         }
@@ -586,6 +582,7 @@ public class DisguiseConfig {
         setEquipmentPacketsEnabled(config.getBoolean("PacketsEnabled.Equipment"));
         setExplicitDisguisePermissions(config.getBoolean("Permissions.ExplicitDisguises"));
         setHideArmorFromSelf(config.getBoolean("RemoveArmor"));
+        setHidingCreativeEquipmentFromSelf(config.getBoolean("RemoveCreativeEquipment"));
         setHideDisguisedPlayers(config.getBoolean("HideDisguisedPlayersFromTab"));
         setHideHeldItemFromSelf(config.getBoolean("RemoveHeldItem"));
         setHorseSaddleable(config.getBoolean("SaddleableHorse"));
@@ -633,6 +630,13 @@ public class DisguiseConfig {
         setViewSelfDisguisesDefault(config.getBoolean("ViewSelfDisguisesDefault"));
         setContactMojangServers(config.getBoolean("ContactMojangServers"));
         setDisguiseRadiusMax(config.getInt("DisguiseRadiusMax"));
+        String apiKey = config.getString("MineSkinAPIKey");
+
+        if (apiKey != null && apiKey.matches("[a-zA-Z0-9]{8,}")) {
+            DisguiseUtilities.getMineSkinAPI().setApiKey(apiKey);
+        } else if (apiKey != null && apiKey.length() > 8) {
+            DisguiseUtilities.getLogger().warning("API Key provided for MineSkin does not appear to be in a valid format!");
+        }
 
         if (!LibsPremium.isPremium() && (isSavePlayerDisguises() || isSaveEntityDisguises())) {
             DisguiseUtilities.getLogger().warning("You must purchase the plugin to use saved disguises!");
@@ -673,19 +677,6 @@ public class DisguiseConfig {
             setUpdatesBranch(UpdatesBranch.valueOf(config.getString("UpdatesBranch").toUpperCase(Locale.ENGLISH)));
         } catch (Exception ex) {
             DisguiseUtilities.getLogger().warning("Cannot parse '" + config.getString("UpdatesBranch") + "' to a valid option for UpdatesBranch");
-        }
-
-        try {
-            String option = config.getString("SelfDisguisesScoreboard", DisguisePushing.MODIFY_SCOREBOARD.name()).toUpperCase(Locale.ENGLISH);
-
-            if (!option.endsWith("_SCOREBOARD")) {
-                option += "_SCOREBOARD";
-            }
-
-            pushingOption = DisguisePushing.valueOf(option);
-        } catch (Exception ex) {
-            DisguiseUtilities.getLogger()
-                    .warning("Cannot parse '" + config.getString("SelfDisguisesScoreboard") + "' to a valid option for SelfDisguisesScoreboard");
         }
 
         PermissionDefault commandVisibility = PermissionDefault.getByName(config.getString("Permissions.SeeCommands"));
@@ -812,7 +803,7 @@ public class DisguiseConfig {
                 }
 
                 if (requireMessage != null) {
-                    requireMessage = ChatColor.translateAlternateColorCodes('&', requireMessage);
+                    requireMessage = DisguiseUtilities.translateAlternateColorCodes(requireMessage);
                 }
 
                 ModdedEntity entity = new ModdedEntity(null, name, living, mod, version, requireMessage, 0);
@@ -962,7 +953,7 @@ public class DisguiseConfig {
             DisguiseUtilities.getLogger().info("Loaded custom disguise " + disguiseName);
         } catch (DisguiseParseException e) {
             throw new DisguiseParseException(LibsMsg.ERROR_LOADING_CUSTOM_DISGUISE, disguiseName, (e.getMessage() == null ? "" : ": " + e.getMessage()));
-        } catch (IllegalAccessException | InvocationTargetException e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             throw new DisguiseParseException(LibsMsg.ERROR_LOADING_CUSTOM_DISGUISE, disguiseName, "");
         }

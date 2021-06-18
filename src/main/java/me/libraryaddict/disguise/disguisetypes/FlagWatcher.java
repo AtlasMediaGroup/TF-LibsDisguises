@@ -4,10 +4,7 @@ import com.comphenix.protocol.PacketType.Play.Server;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.ComponentConverter;
-import com.comphenix.protocol.wrappers.WrappedChatComponent;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.comphenix.protocol.wrappers.*;
 import com.google.common.base.Strings;
 import com.mojang.datafixers.util.Pair;
 import lombok.AccessLevel;
@@ -59,7 +56,7 @@ public class FlagWatcher {
     private transient boolean previouslySneaking;
     @Getter
     private boolean upsideDown;
-    private ChatColor glowColor;
+    private ChatColor glowColor = ChatColor.WHITE;
     @Getter
     private Float pitchLock;
     @Getter
@@ -282,6 +279,10 @@ public class FlagWatcher {
                 }
 
                 value = entityValues.get(id);
+
+                if (id == MetaIndex.LIVING_HEALTH.getIndex() && (float) watch.getRawValue() <= 0) {
+                    value = watch.getRawValue();
+                }
             } else if (backupEntityValues.containsKey(id)) {
                 if (backupEntityValues.get(id) == null) {
                     continue;
@@ -568,8 +569,15 @@ public class FlagWatcher {
             }
 
             if (NmsVersion.v1_13.isSupported()) {
-                setData(MetaIndex.ENTITY_CUSTOM_NAME,
-                        Optional.of(WrappedChatComponent.fromJson(ComponentSerializer.toString(DisguiseUtilities.getColoredChat(name)))));
+                Optional<WrappedChatComponent> optional;
+
+                if (DisguiseUtilities.hasAdventureTextSupport()) {
+                    optional = Optional.of(AdventureComponentConverter.fromComponent(DisguiseUtilities.getAdventureChat(name)));
+                } else {
+                    optional = Optional.of(WrappedChatComponent.fromJson(ComponentSerializer.toString(DisguiseUtilities.getColoredChat(name))));
+                }
+
+                setData(MetaIndex.ENTITY_CUSTOM_NAME, optional);
             } else {
                 setData(MetaIndex.ENTITY_CUSTOM_NAME_OLD, name);
             }
@@ -582,11 +590,16 @@ public class FlagWatcher {
         }
     }
 
-    protected TargetedDisguise getDisguise() {
+    public TargetedDisguise getDisguise() {
         return disguise;
     }
 
-    protected void setDisguise(TargetedDisguise disguise) {
+    @Deprecated
+    public void setDisguise(TargetedDisguise disguise) {
+        if (this.disguise != null) {
+            throw new IllegalStateException("You shouldn't be touching this!");
+        }
+
         this.disguise = disguise;
         equipment.setFlagWatcher(this);
 
@@ -708,7 +721,7 @@ public class FlagWatcher {
     }
 
     public void setGlowColor(ChatColor glowColor) {
-        if (getGlowColor() == glowColor) {
+        if (getGlowColor() == glowColor || glowColor == null || !glowColor.isColor()) {
             return;
         }
 
@@ -721,7 +734,7 @@ public class FlagWatcher {
         if (getDisguise().isPlayerDisguise()) {
             DisguiseUtilities.updateExtendedName((PlayerDisguise) getDisguise());
         } else {
-            // TODO
+            DisguiseUtilities.setGlowColor(getDisguise(), getGlowColor());
         }
     }
 
@@ -988,6 +1001,11 @@ public class FlagWatcher {
         } else {
             setEntityPose(EntityPose.STANDING);
         }
+    }
+
+    @Deprecated
+    public <Y> void setUnsafeData(MetaIndex<Y> id, Y value) {
+        setData(id, value);
     }
 
     protected <Y> void setData(MetaIndex<Y> id, Y value) {

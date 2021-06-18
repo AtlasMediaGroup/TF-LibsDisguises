@@ -24,7 +24,6 @@ import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import org.bukkit.Art;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -71,33 +70,6 @@ public class PacketHandlerSpawn implements IPacketHandler {
         Disguise disguise = packets.getDisguise();
         boolean sendArmor = true;
 
-        if (DisguiseConfig.isMiscDisguisesForLivingEnabled()) {
-            if (disguise.getWatcher() instanceof LivingWatcher) {
-                ArrayList<WrappedAttribute> attributes = new ArrayList<>();
-
-                WrappedAttribute.Builder builder = WrappedAttribute.newBuilder().attributeKey("generic.maxHealth");
-
-                if (((LivingWatcher) disguise.getWatcher()).isMaxHealthSet()) {
-                    builder.baseValue(((LivingWatcher) disguise.getWatcher()).getMaxHealth());
-                } else if (DisguiseConfig.isMaxHealthDeterminedByDisguisedEntity() && disguisedEntity instanceof Damageable) {
-                    builder.baseValue(((Damageable) disguisedEntity).getMaxHealth());
-                } else {
-                    builder.baseValue(DisguiseValues.getDisguiseValues(disguise.getType()).getMaxHealth());
-                }
-
-                PacketContainer packet = new PacketContainer(PacketType.Play.Server.UPDATE_ATTRIBUTES);
-
-                builder.packet(packet);
-
-                attributes.add(builder.build());
-
-                packet.getIntegers().write(0, disguisedEntity.getEntityId());
-                packet.getAttributeCollectionModifier().write(0, attributes);
-
-                packets.addPacket(packet);
-            }
-        }
-
         Location loc = disguisedEntity.getLocation().clone().add(0, DisguiseUtilities.getYModifier(disguise) + disguise.getWatcher().getYModifier(), 0);
 
         Float pitchLock = DisguiseConfig.isMovementPacketsEnabled() ? disguise.getWatcher().getPitchLock() : null;
@@ -139,7 +111,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
             StructureModifier<Object> mods = spawnPainting.getModifier();
 
             mods.write(0, disguisedEntity.getEntityId());
-            mods.write(1, disguisedEntity.getUniqueId());
+            mods.write(1, disguise.getUUID());
             mods.write(2, ReflectionManager.getBlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
             mods.write(3, ReflectionManager.getEnumDirection(((int) loc.getYaw()) % 4));
 
@@ -174,7 +146,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
                 sendTab.getModifier().write(0, ReflectionManager.getEnumPlayerInfoAction(0));
 
                 List playerList = Collections.singletonList(ReflectionManager.getPlayerInfoData(sendTab.getHandle(), ReflectionManager
-                    .getGameProfileWithThisSkin(playerDisguise.getUUID(), playerDisguise.getProfileName(), playerDisguise.getGameProfile())));
+                        .getGameProfileWithThisSkin(playerDisguise.getUUID(), playerDisguise.getProfileName(), playerDisguise.getGameProfile())));
                 sendTab.getModifier().write(1, playerList);
 
                 packets.addPacket(sendTab);
@@ -199,11 +171,11 @@ public class PacketHandlerSpawn implements IPacketHandler {
             spawnPlayer.getIntegers().write(0, entityId); // Id
             spawnPlayer.getModifier().write(1, playerDisguise.getUUID());
 
-            double dist = observer.getLocation().distanceSquared(disguisedEntity.getLocation());
+            double dist = observer.getLocation().toVector().distanceSquared(disguisedEntity.getLocation().toVector());
 
             // If self disguise, or further than 50 blocks, or not in front of entity
             normalPlayerDisguise = observer == disguisedEntity || disguisedEntity.getPassengers().contains(observer) || dist > (50 * 50) ||
-                    (observer.getLocation().add(observer.getLocation().getDirection().normalize()).distanceSquared(disguisedEntity.getLocation()) - dist) < 0.3;
+                    (observer.getLocation().add(observer.getLocation().getDirection().normalize()).toVector().distanceSquared(disguisedEntity.getLocation().toVector()) - dist) < 0.3;
             sendArmor = normalPlayerDisguise;
 
             skin.setSleepPackets(!normalPlayerDisguise);
@@ -257,7 +229,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
             StructureModifier<Object> mods = spawnEntity.getModifier();
 
             mods.write(0, disguisedEntity.getEntityId());
-            mods.write(1, disguisedEntity.getUniqueId());
+            mods.write(1, disguise.getUUID());
 
             if (!disguise.getType().isCustom()) {
                 mods.write(2, disguise.getType().getTypeId());
@@ -319,14 +291,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
             double z = loc.getZ();
 
             if (disguise.getType() == DisguiseType.FALLING_BLOCK) {
-                if (NmsVersion.v1_13.isSupported()) {
-                    BlockData block = ((FallingBlockWatcher) disguise.getWatcher()).getBlockData();
-
-                    data = ReflectionManager.getCombinedIdByBlockData(block);
-                } else {
-                    ItemStack block = ((FallingBlockWatcher) disguise.getWatcher()).getBlock();
-                    data = ReflectionManager.getCombinedIdByItemStack(block);
-                }
+                data = ((FallingBlockWatcher) disguise.getWatcher()).getBlockCombinedId();
 
                 if (((FallingBlockWatcher) disguise.getWatcher()).isGridLocked()) {
                     double yMod = disguise.getWatcher().getYModifier();
@@ -356,9 +321,8 @@ public class PacketHandlerSpawn implements IPacketHandler {
                     entityType = ReflectionManager.getEntityType(disguise.getType().getEntityType());
                 }
 
-                Object[] params =
-                        new Object[]{disguisedEntity.getEntityId(), disguisedEntity.getUniqueId(), x, y, z, loc.getPitch(), loc.getYaw(), entityType, data,
-                                ReflectionManager.getVec3D(disguisedEntity.getVelocity())};
+                Object[] params = new Object[]{disguisedEntity.getEntityId(), disguise.getUUID(), x, y, z, loc.getPitch(), loc.getYaw(), entityType, data,
+                        ReflectionManager.getVec3D(disguisedEntity.getVelocity())};
 
                 spawnEntity = ProtocolLibrary.getProtocolManager().createPacketConstructor(PacketType.Play.Server.SPAWN_ENTITY, params).createPacket(params);
             } else {
@@ -428,6 +392,34 @@ public class PacketHandlerSpawn implements IPacketHandler {
             mods.write(1, (byte) 4);
 
             packets.addPacket(newPacket);
+        }
+
+        if (DisguiseConfig.isMiscDisguisesForLivingEnabled()) {
+            if (disguise.getWatcher() instanceof LivingWatcher) {
+                ArrayList<WrappedAttribute> attributes = new ArrayList<>();
+
+                WrappedAttribute.Builder builder =
+                        WrappedAttribute.newBuilder().attributeKey(NmsVersion.v1_16.isSupported() ? "generic.max_health" : "generic.maxHealth");
+
+                if (((LivingWatcher) disguise.getWatcher()).isMaxHealthSet()) {
+                    builder.baseValue(((LivingWatcher) disguise.getWatcher()).getMaxHealth());
+                } else if (DisguiseConfig.isMaxHealthDeterminedByDisguisedEntity() && disguisedEntity instanceof Damageable) {
+                    builder.baseValue(((Damageable) disguisedEntity).getMaxHealth());
+                } else {
+                    builder.baseValue(DisguiseValues.getDisguiseValues(disguise.getType()).getMaxHealth());
+                }
+
+                PacketContainer packet = new PacketContainer(PacketType.Play.Server.UPDATE_ATTRIBUTES);
+
+                builder.packet(packet);
+
+                attributes.add(builder.build());
+
+                packet.getIntegers().write(0, disguisedEntity.getEntityId());
+                packet.getAttributeCollectionModifier().write(0, attributes);
+
+                packets.addPacket(packet);
+            }
         }
 
         if (!disguise.isPlayerDisguise() || normalPlayerDisguise) {
