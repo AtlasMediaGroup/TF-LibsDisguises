@@ -1,6 +1,8 @@
 package me.libraryaddict.disguise.commands;
 
 import com.comphenix.protocol.ProtocolLibrary;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import me.libraryaddict.disguise.BlockedDisguises;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.commands.disguise.DisguiseCommand;

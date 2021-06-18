@@ -224,11 +224,9 @@ public class LibsDisguises extends JavaPlugin {
             registerCommand("libsdisguises", new LibsDisguisesCommand());
             registerCommand("disguise", new DisguiseCommand());
             registerCommand("undisguise", new UndisguiseCommand());
-            registerCommand("disguiseplayer", new DisguisePlayerCommand());
             registerCommand("undisguiseplayer", new UndisguisePlayerCommand());
             registerCommand("undisguiseentity", new UndisguiseEntityCommand());
             registerCommand("disguiseentity", new DisguiseEntityCommand());
-            registerCommand("disguiseradius", new DisguiseRadiusCommand());
             registerCommand("undisguiseradius", new UndisguiseRadiusCommand());
             registerCommand("disguisehelp", new DisguiseHelpCommand());
             registerCommand("disguiseclone", new DisguiseCloneCommand());
@@ -236,8 +234,6 @@ public class LibsDisguises extends JavaPlugin {
             registerCommand("disguiseviewbar", new DisguiseViewBarCommand());
             registerCommand("disguisemodify", new DisguiseModifyCommand());
             registerCommand("disguisemodifyentity", new DisguiseModifyEntityCommand());
-            registerCommand("disguisemodifyplayer", new DisguiseModifyPlayerCommand());
-            registerCommand("disguisemodifyradius", new DisguiseModifyRadiusCommand());
             registerCommand("copydisguise", new CopyDisguiseCommand());
             registerCommand("grabskin", new GrabSkinCommand());
             registerCommand("savedisguise", new SaveDisguiseCommand());
