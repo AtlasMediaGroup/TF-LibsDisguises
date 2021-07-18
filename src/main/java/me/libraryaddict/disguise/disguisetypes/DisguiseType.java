@@ -17,6 +17,8 @@ public enum DisguiseType {
 
     ARROW(60, 0),
 
+    @NmsAddedIn(NmsVersion.v1_17) AXOLOTL,
+
     BAT,
 
     @NmsAddedIn(NmsVersion.v1_15) BEE,
@@ -83,6 +85,12 @@ public enum DisguiseType {
 
     GIANT,
 
+    @NmsAddedIn(NmsVersion.v1_17) GLOW_ITEM_FRAME,
+
+    @NmsAddedIn(NmsVersion.v1_17) GLOW_SQUID,
+
+    @NmsAddedIn(NmsVersion.v1_17) GOAT,
+
     GUARDIAN,
 
     @NmsAddedIn(NmsVersion.v1_16) HOGLIN,
@@ -104,6 +112,8 @@ public enum DisguiseType {
     LEASH_HITCH(77),
 
     MAGMA_CUBE,
+
+    @NmsAddedIn(NmsVersion.v1_17) MARKER,
 
     MINECART(10),
 
@@ -285,8 +295,7 @@ public enum DisguiseType {
             } else {
                 setEntityType(EntityType.valueOf(name()));
             }
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
         }
     }
 
@@ -341,13 +350,11 @@ public enum DisguiseType {
     }
 
     public boolean isMisc() {
-        return this == DisguiseType.MODDED_MISC ||
-                (!isCustom() && getEntityType() != null && !getEntityType().isAlive());
+        return this == DisguiseType.MODDED_MISC || (!isCustom() && getEntityType() != null && !getEntityType().isAlive());
     }
 
     public boolean isMob() {
-        return this == DisguiseType.MODDED_LIVING ||
-                (!isCustom() && getEntityType() != null && getEntityType().isAlive() && !isPlayer());
+        return this == DisguiseType.MODDED_LIVING || (!isCustom() && getEntityType() != null && getEntityType().isAlive() && !isPlayer());
     }
 
     public boolean isPlayer() {

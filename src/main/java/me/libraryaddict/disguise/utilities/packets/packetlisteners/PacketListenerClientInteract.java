@@ -6,6 +6,7 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.EnumWrappers;
+import com.comphenix.protocol.wrappers.WrappedEnumEntityUseAction;
 import me.libraryaddict.disguise.DisguiseAPI;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
@@ -16,8 +17,10 @@ import me.libraryaddict.disguise.disguisetypes.TargetedDisguise;
 import me.libraryaddict.disguise.disguisetypes.watchers.*;
 import me.libraryaddict.disguise.events.DisguiseInteractEvent;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
+import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Axolotl;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -52,8 +55,9 @@ public class PacketListenerClientInteract extends PacketAdapter {
             event.setCancelled(true);
         } else if (DisguiseUtilities.isNotInteractable(packet.getIntegers().read(0))) {
             event.setCancelled(true);
-        } else if (DisguiseUtilities.isSpecialInteract(packet.getIntegers().read(0)) && packet.getModifier().read(3) != null &&
-                packet.getHands().read(0) == EnumWrappers.Hand.OFF_HAND) {
+        } else if (DisguiseUtilities.isSpecialInteract(packet.getIntegers().read(0)) && getHand(packet) == EnumWrappers.Hand.OFF_HAND) {
+            // If its an interaction that we should cancel, such as right clicking a wolf..
+            // Honestly I forgot the reason.
             event.setCancelled(true);
         }
 
@@ -69,6 +73,28 @@ public class PacketListenerClientInteract extends PacketAdapter {
         }
     }
 
+    private EnumWrappers.Hand getHand(PacketContainer packet) {
+        if (!NmsVersion.v1_17.isSupported()) {
+            return packet.getHands().read(0);
+        }
+
+        WrappedEnumEntityUseAction action = packet.getEnumEntityUseActions().read(0);
+
+        if (action.getAction() == EnumWrappers.EntityUseAction.ATTACK) {
+            return EnumWrappers.Hand.MAIN_HAND;
+        }
+
+        return action.getHand();
+    }
+
+    private EnumWrappers.EntityUseAction getInteractType(PacketContainer packet) {
+        if (!NmsVersion.v1_17.isSupported()) {
+            return packet.getEntityUseActions().read(0);
+        }
+
+        return packet.getEnumEntityUseActions().read(0).getAction();
+    }
+
     private void handleSync(Player observer, PacketContainer packet) {
         final Disguise disguise = DisguiseUtilities.getDisguise(observer, packet.getIntegers().read(0));
 
@@ -80,12 +106,12 @@ public class PacketListenerClientInteract extends PacketAdapter {
             // The type of interact, we don't care the difference with "Interact_At" however as it's not
             // useful
             // for self disguises
-            EnumWrappers.EntityUseAction interactType = packet.getEntityUseActions().read(0);
             final EquipmentSlot handUsed;
+            final EnumWrappers.EntityUseAction interactType = getInteractType(packet);
 
             // Attack has a null hand, which throws an error if you attempt to fetch
             // If the hand used wasn't their main hand
-            if (interactType != EnumWrappers.EntityUseAction.ATTACK && packet.getHands().read(0) == EnumWrappers.Hand.OFF_HAND) {
+            if (interactType != EnumWrappers.EntityUseAction.ATTACK && getHand(packet) == EnumWrappers.Hand.OFF_HAND) {
                 handUsed = EquipmentSlot.OFF_HAND;
             } else {
                 handUsed = EquipmentSlot.HAND;
@@ -104,6 +130,13 @@ public class PacketListenerClientInteract extends PacketAdapter {
         }
 
         switch (disguise.getType()) {
+            case AXOLOTL:
+                // They can't be picked up by a bucket sir if they are fake
+                if (!(disguise.getEntity() instanceof Axolotl)) {
+                    DisguiseUtilities.refreshTrackers((TargetedDisguise) disguise);
+                    observer.updateInventory(); // Remove their fake bucket
+                }
+                break;
             case CAT:
             case WOLF:
             case SHEEP:

@@ -39,7 +39,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
 import org.apache.commons.lang.StringUtils;
@@ -130,15 +129,15 @@ public class DisguiseUtilities {
                 team.setColor(disguise.getWatcher().getGlowColor());
             }
 
-            String prefix = NmsVersion.v1_13.isSupported() ? "Colorize" : getPrefix();
-            String suffix = NmsVersion.v1_13.isSupported() ? "Colorize" : getSuffix();
+            String prefix = getPrefix();
+            String suffix = getSuffix();
 
             if (!prefix.equals(team.getPrefix())) {
-                team.setPrefix(prefix);
+                team.setPrefix(NmsVersion.v1_13.isSupported() ? "Colorize" : prefix);
             }
 
             if (!suffix.equals(team.getSuffix())) {
-                team.setSuffix(suffix);
+                team.setSuffix(NmsVersion.v1_13.isSupported() ? "Colorize" : suffix);
             }
         }
     }
@@ -219,17 +218,8 @@ public class DisguiseUtilities {
         }
     }
 
-    public static boolean hasAdventureTextSupport() {
-        if (adventureTextSupport == null) {
-            try {
-                Class.forName("net.kyori.adventure.text.minimessage.MiniMessage");
-                adventureTextSupport = true;
-            } catch (ClassNotFoundException ex) {
-                adventureTextSupport = false;
-            }
-        }
-
-        return adventureTextSupport;
+    public static String serialize(Component component) {
+        return GsonComponentSerializer.gson().serialize(component);
     }
 
     public static void doSkinUUIDWarning(CommandSender sender) {
@@ -359,11 +349,8 @@ public class DisguiseUtilities {
     }
 
     public static void removeInvisibleSlime(Player player) {
-        PacketContainer container = new PacketContainer(Server.ENTITY_DESTROY);
-        container.getIntegerArrays().write(0, new int[]{DisguiseAPI.getEntityAttachmentId()});
-
         try {
-            ProtocolLibrary.getProtocolManager().sendServerPacket(player, container, false);
+            ProtocolLibrary.getProtocolManager().sendServerPacket(player, getDestroyPacket(DisguiseAPI.getEntityAttachmentId()), false);
         } catch (InvocationTargetException e) {
             e.printStackTrace();
         }
@@ -472,8 +459,52 @@ public class DisguiseUtilities {
         }
     }
 
-    public static String getProtocolLibRequiredVersion() {
-        return !NmsVersion.v1_13.isSupported() ? "4.4.0" : NmsVersion.v1_16.isSupported() ? "4.6.0" : "4.5.1";
+    /**
+     * Returns the min required version, as in any older version will just not work.
+     */
+    public static String[] getProtocolLibRequiredVersion() {
+        // If we are on 1.12
+        if (!NmsVersion.v1_13.isSupported()) {
+            return new String[]{"4.4.0"};
+        }
+
+        // If we are on 1.13, 1.14, 1.15
+        if (!NmsVersion.v1_16.isSupported()) {
+            return new String[]{"4.5.1"};
+        }
+
+        // If we are on 1.16
+        if (!NmsVersion.v1_17.isSupported()) {
+            return new String[]{"4.6.0"};
+        }
+
+        // If we are on 1.17, future release build or this dev build
+        return new String[]{"4.7.0"};
+    }
+
+    public static boolean isProtocolLibOutdated() {
+        String plVersion = Bukkit.getPluginManager().getPlugin("ProtocolLib").getDescription().getVersion();
+        String[] reqVersion = getProtocolLibRequiredVersion();
+
+        // If this is also checking for a custom build, and PL has the custom build in..
+        // We run this check first as the 4.7.1 isn't out, and it'd always tell us to update otherwise.
+        if (reqVersion.length > 1 && plVersion.contains("-SNAPSHOT-b")) {
+            try {
+                String build = plVersion.substring(plVersion.lastIndexOf("b") + 1);
+
+                // Just incase they're running a custom build?
+                if (build.length() < 3) {
+                    return false;
+                }
+
+                int buildNo = Integer.parseInt(build);
+
+                return buildNo < Integer.parseInt(reqVersion[1]);
+            } catch (Throwable ignored) {
+            }
+        }
+
+        return isOlderThan(reqVersion[0], plVersion);
     }
 
     public static File updateProtocolLib() throws Exception {
@@ -994,18 +1025,17 @@ public class DisguiseUtilities {
                 return;
             }
 
+            // TODO Store reflection field
             Set trackedPlayers = (Set) ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayers").get(entityTrackerEntry);
 
             // If the tracker exists. Remove himself from his tracker
             trackedPlayers = (Set) new HashSet(trackedPlayers).clone(); // Copy before iterating to prevent
             // ConcurrentModificationException
 
-            PacketContainer destroyPacket = new PacketContainer(Server.ENTITY_DESTROY);
-
-            destroyPacket.getIntegerArrays().write(0, new int[]{disguise.getEntity().getEntityId()});
+            PacketContainer destroyPacket = getDestroyPacket(disguise.getEntity().getEntityId());
 
             for (Object p : trackedPlayers) {
-                Player player = (Player) ReflectionManager.getBukkitEntity(p);
+                Player player = (Player) ReflectionManager.getBukkitEntity(ReflectionManager.getPlayerFromPlayerConnection(p));
 
                 if (player == disguise.getEntity() || disguise.canSee(player)) {
                     ProtocolLibrary.getProtocolManager().sendServerPacket(player, destroyPacket);
@@ -1069,7 +1099,17 @@ public class DisguiseUtilities {
     public static PacketContainer getDestroyPacket(int... ids) {
         PacketContainer destroyPacket = new PacketContainer(Server.ENTITY_DESTROY);
 
-        destroyPacket.getIntegerArrays().write(0, ids);
+        if (NmsVersion.v1_17.isSupported()) {
+            List<Integer> ints = new ArrayList<>();
+
+            for (int id : ids) {
+                ints.add(id);
+            }
+
+            destroyPacket.getIntLists().write(0, ints);
+        } else {
+            destroyPacket.getIntegerArrays().write(0, ids);
+        }
 
         return destroyPacket;
     }
@@ -1178,11 +1218,12 @@ public class DisguiseUtilities {
             Object entityTrackerEntry = ReflectionManager.getEntityTrackerEntry(disguise.getEntity());
 
             if (entityTrackerEntry != null) {
+                // TODO Store reflection field
                 Set trackedPlayers = (Set) ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayers").get(entityTrackerEntry);
                 trackedPlayers = (Set) new HashSet(trackedPlayers).clone(); // Copy before iterating to prevent
                 // ConcurrentModificationException
                 for (Object p : trackedPlayers) {
-                    Player player = (Player) ReflectionManager.getBukkitEntity(p);
+                    Player player = (Player) ReflectionManager.getBukkitEntity(ReflectionManager.getPlayerFromPlayerConnection(p));
 
                     if (((TargetedDisguise) disguise).canSee(player)) {
                         players.add(player);
@@ -1581,7 +1622,8 @@ public class DisguiseUtilities {
 
                 trackedPlayers = (Set) new HashSet(trackedPlayers).clone(); // Copy before iterating to prevent
                 // ConcurrentModificationException
-                for (final Object p : trackedPlayers) {
+                for (final Object o : trackedPlayers) {
+                    Object p = ReflectionManager.getPlayerFromPlayerConnection(o);
                     Player pl = (Player) ReflectionManager.getBukkitEntity(p);
 
                     if (pl == null || !player.equalsIgnoreCase((pl).getName())) {
@@ -1634,7 +1676,8 @@ public class DisguiseUtilities {
 
                     trackedPlayers = (Set) new HashSet(trackedPlayers).clone(); // Copy before iterating to prevent
                     // ConcurrentModificationException
-                    for (final Object p : trackedPlayers) {
+                    for (final Object o : trackedPlayers) {
+                        Object p = ReflectionManager.getPlayerFromPlayerConnection(o);
                         Player player = (Player) ReflectionManager.getBukkitEntity(p);
 
                         if (player != entity) {
@@ -1691,6 +1734,7 @@ public class DisguiseUtilities {
             if (entityTrackerEntry != null) {
                 Set trackedPlayers = (Set) ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayers").get(entityTrackerEntry);
 
+                // TODO Store the fields
                 final Method clear = ReflectionManager
                         .getNmsMethod("EntityTrackerEntry", NmsVersion.v1_14.isSupported() ? "a" : "clear", ReflectionManager.getNmsClass("EntityPlayer"));
 
@@ -1700,7 +1744,8 @@ public class DisguiseUtilities {
                 trackedPlayers = (Set) new HashSet(trackedPlayers).clone();
                 PacketContainer destroyPacket = getDestroyPacket(disguise.getEntity().getEntityId());
 
-                for (final Object p : trackedPlayers) {
+                for (final Object o : trackedPlayers) {
+                    Object p = ReflectionManager.getPlayerFromPlayerConnection(o);
                     Player player = (Player) ReflectionManager.getBukkitEntity(p);
 
                     if (disguise.getEntity() != player && disguise.canSee(player)) {
@@ -1778,10 +1823,8 @@ public class DisguiseUtilities {
         ids[ids.length - 1] = DisguiseAPI.getSelfDisguiseId();
 
         // Send a packet to destroy the fake entity
-        PacketContainer packet = getDestroyPacket(ids);
-
         try {
-            ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
+            ProtocolLibrary.getProtocolManager().sendServerPacket(player, getDestroyPacket(ids));
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -1812,14 +1855,15 @@ public class DisguiseUtilities {
 
             if (entityTrackerEntry != null) {
 
+                // TODO Store reflection fields
                 // If the tracker exists. Remove himself from his tracker
                 if (!runningPaper) {
                     Object trackedPlayersObj = ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayers").get(entityTrackerEntry);
 
-                    ((Set<Object>) trackedPlayersObj).remove(ReflectionManager.getNmsEntity(player));
+                    ((Set<Object>) trackedPlayersObj).remove(ReflectionManager.getPlayerConnectionOrPlayer(player));
                 } else {
                     ((Map<Object, Object>) ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayerMap").get(entityTrackerEntry))
-                            .remove(ReflectionManager.getNmsEntity(player));
+                            .remove(ReflectionManager.getPlayerConnectionOrPlayer(player));
                 }
             }
         } catch (Exception ex) {
@@ -2350,15 +2394,16 @@ public class DisguiseUtilities {
                 return;
             }
 
+            // TODO Store reflection fields
             // Check for code differences in PaperSpigot vs Spigot
             if (!runningPaper) {
                 // Add himself to his own entity tracker
                 Object trackedPlayersObj = ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayers").get(entityTrackerEntry);
 
-                ((Set<Object>) trackedPlayersObj).add(ReflectionManager.getNmsEntity(player));
+                ((Set<Object>) trackedPlayersObj).add(ReflectionManager.getPlayerConnectionOrPlayer(player));
             } else {
                 Field field = ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayerMap");
-                Object nmsEntity = ReflectionManager.getNmsEntity(player);
+                Object nmsEntity = ReflectionManager.getPlayerConnectionOrPlayer(player);
                 Map<Object, Object> map = ((Map<Object, Object>) field.get(entityTrackerEntry));
                 map.put(nmsEntity, true);
             }
@@ -2375,7 +2420,9 @@ public class DisguiseUtilities {
             boolean isMoving = false;
 
             try {
-                Field field = ReflectionManager.getNmsClass("EntityTrackerEntry").getDeclaredField(NmsVersion.v1_14.isSupported() ? "q" : "isMoving");
+                // TODO Store the field
+                Field field = ReflectionManager.getNmsClass("EntityTrackerEntry")
+                        .getDeclaredField(NmsVersion.v1_17.isSupported() ? "r" : NmsVersion.v1_14.isSupported() ? "q" : "isMoving");
                 field.setAccessible(true);
                 isMoving = field.getBoolean(entityTrackerEntry);
             } catch (Exception ex) {
@@ -2451,20 +2498,11 @@ public class DisguiseUtilities {
         }
     }
 
-    @Deprecated
     public static void sendMessage(CommandSender sender, LibsMsg msg, Object... args) {
-        if (!NmsVersion.v1_16.isSupported()) {
-            String message = msg.get(args);
+        BaseComponent[] components = msg.getChat(args);
 
-            if (!message.isEmpty()) {
-                sender.sendMessage(message);
-            }
-        } else {
-            BaseComponent[] components = msg.getChat(args);
-
-            if (components.length > 0) {
-                sender.spigot().sendMessage(components);
-            }
+        if (components.length > 0) {
+            sender.spigot().sendMessage(components);
         }
     }
 
@@ -2537,110 +2575,12 @@ public class DisguiseUtilities {
         return MiniMessage.get().parse(message);
     }
 
-    /**
-     * Modification of TextComponent.fromLegacyText
-     */
     public static BaseComponent[] getColoredChat(String message) {
         if (message.isEmpty()) {
             return new BaseComponent[0];
         }
 
-        if (hasAdventureTextSupport()) {
-            return ComponentSerializer.parse(GsonComponentSerializer.gson().serialize(getAdventureChat(message)));
-        }
-
-        ArrayList<BaseComponent> components = new ArrayList();
-        StringBuilder builder = new StringBuilder();
-        TextComponent component = new TextComponent();
-        Matcher matcher = urlMatcher.matcher(message);
-
-        for (int i = 0; i < message.length(); ++i) {
-            char c = message.charAt(i);
-            TextComponent old;
-
-            if (c == ChatColor.COLOR_CHAR && i + 1 >= message.length()) {
-                break;
-            }
-
-            if (c == ChatColor.COLOR_CHAR || (NmsVersion.v1_16.isSupported() && c == '<' && i + 9 < message.length() &&
-                    Pattern.matches("<#[0-9a-fA-F]{6}>", message.substring(i, i + 9)))) {
-                i++;
-
-                net.md_5.bungee.api.ChatColor format;
-
-                if (c != ChatColor.COLOR_CHAR || (message.length() - i >= 7 && Pattern.matches("#[0-9a-fA-F]{6}", message.substring(i, i + 7)))) {
-                    format = net.md_5.bungee.api.ChatColor.of(message.substring(i, i + 7));
-
-                    i += c == '<' ? 7 : 8;
-                } else {
-                    c = message.charAt(i);
-
-                    if (c >= 'A' && c <= 'Z') {
-                        c = (char) (c + 32);
-                    }
-
-                    format = net.md_5.bungee.api.ChatColor.getByChar(c);
-                }
-
-                if (format != null) {
-                    if (builder.length() > 0) {
-                        old = component;
-                        component = new TextComponent(component);
-                        old.setText(builder.toString());
-                        builder = new StringBuilder();
-                        components.add(old);
-                    }
-
-                    if (format == net.md_5.bungee.api.ChatColor.BOLD) {
-                        component.setBold(true);
-                    } else if (format == net.md_5.bungee.api.ChatColor.ITALIC) {
-                        component.setItalic(true);
-                    } else if (format == net.md_5.bungee.api.ChatColor.UNDERLINE) {
-                        component.setUnderlined(true);
-                    } else if (format == net.md_5.bungee.api.ChatColor.STRIKETHROUGH) {
-                        component.setStrikethrough(true);
-                    } else if (format == net.md_5.bungee.api.ChatColor.MAGIC) {
-                        component.setObfuscated(true);
-                    } else if (format == net.md_5.bungee.api.ChatColor.RESET) {
-                        component = new TextComponent();
-                        component.setColor(net.md_5.bungee.api.ChatColor.WHITE);
-                    } else {
-                        component = new TextComponent();
-                        component.setColor(format);
-                    }
-                }
-            } else {
-                int pos = message.indexOf(32, i);
-                if (pos == -1) {
-                    pos = message.length();
-                }
-
-                if (matcher.region(i, pos).find()) {
-                    if (builder.length() > 0) {
-                        old = component;
-                        component = new TextComponent(component);
-                        old.setText(unquoteHex(builder.toString()));
-                        builder = new StringBuilder();
-                        components.add(old);
-                    }
-
-                    old = component;
-                    component = new TextComponent(component);
-                    String urlString = message.substring(i, pos);
-                    component.setText(unquoteHex(urlString));
-                    component.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, urlString.startsWith("http") ? urlString : "http://" + urlString));
-                    components.add(component);
-                    i += pos - i - 1;
-                    component = old;
-                } else {
-                    builder.append(c);
-                }
-            }
-        }
-
-        component.setText(unquoteHex(builder.toString()));
-        components.add(component);
-        return components.toArray(new BaseComponent[0]);
+        return ComponentSerializer.parse(serialize(getAdventureChat(message)));
     }
 
     public static void sendProtocolLibUpdateMessage(CommandSender p, String version, String requiredProtocolLib) {
@@ -3006,7 +2946,8 @@ public class DisguiseUtilities {
             destroyIds = Arrays.copyOfRange(standIds, newNames.length, internalOldNames.length);
         }
 
-        double height = disguise.getHeight();
+        // Don't need to offset with DisguiseUtilities.getYModifier, because that's a visual offset and not an actual location offset
+        double height = disguise.getHeight() + disguise.getWatcher().getYModifier();
 
         for (int i = 0; i < newNames.length; i++) {
             if (i < internalOldNames.length) {
@@ -3047,7 +2988,7 @@ public class DisguiseUtilities {
                 Location loc = disguise.getEntity().getLocation();
 
                 packet.getDoubles().write(0, loc.getX());
-                packet.getDoubles().write(1, loc.getY() + height + disguise.getWatcher().getYModifier() + (0.28 * i));
+                packet.getDoubles().write(1, loc.getY() + height  + (0.28 * i));
                 packet.getDoubles().write(2, loc.getZ());
                 packets.add(packet);
 
@@ -3154,6 +3095,8 @@ public class DisguiseUtilities {
         }
 
         switch (disguise.getType()) {
+            case ENDER_CRYSTAL:
+                return yMod + 1;
             case BAT:
                 if (entity instanceof LivingEntity) {
                     return yMod + ((LivingEntity) entity).getEyeHeight();
@@ -3197,6 +3140,7 @@ public class DisguiseUtilities {
             default:
                 break;
         }
+
         return yMod;
     }
 }

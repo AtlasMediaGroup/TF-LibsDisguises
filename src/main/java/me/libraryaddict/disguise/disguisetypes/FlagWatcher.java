@@ -4,7 +4,10 @@ import com.comphenix.protocol.PacketType.Play.Server;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.*;
+import com.comphenix.protocol.wrappers.ComponentConverter;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.google.common.base.Strings;
 import com.mojang.datafixers.util.Pair;
 import lombok.AccessLevel;
@@ -20,7 +23,6 @@ import me.libraryaddict.disguise.utilities.reflection.NmsAddedIn;
 import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
 import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.chat.ComponentSerializer;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -569,13 +571,8 @@ public class FlagWatcher {
             }
 
             if (NmsVersion.v1_13.isSupported()) {
-                Optional<WrappedChatComponent> optional;
-
-                if (DisguiseUtilities.hasAdventureTextSupport()) {
-                    optional = Optional.of(AdventureComponentConverter.fromComponent(DisguiseUtilities.getAdventureChat(name)));
-                } else {
-                    optional = Optional.of(WrappedChatComponent.fromJson(ComponentSerializer.toString(DisguiseUtilities.getColoredChat(name))));
-                }
+                Optional<WrappedChatComponent> optional =
+                        Optional.of(WrappedChatComponent.fromJson(DisguiseUtilities.serialize(DisguiseUtilities.getAdventureChat(name))));
 
                 setData(MetaIndex.ENTITY_CUSTOM_NAME, optional);
             } else {

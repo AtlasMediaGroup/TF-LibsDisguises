@@ -1,7 +1,6 @@
 package me.libraryaddict.disguise.disguisetypes;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.PacketType.Play.Server;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
@@ -30,6 +29,7 @@ import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
 import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.boss.BarColor;
@@ -358,7 +358,9 @@ public abstract class Disguise {
 
         removeBossBar();
 
-        BossBar bar = Bukkit.createBossBar(getBossBar(), LibsMsg.ACTION_BAR_MESSAGE.get(getDisguiseName()), getBossBarColor(), getBossBarStyle());
+        BossBar bar = Bukkit.createBossBar(getBossBar(),
+                BaseComponent.toLegacyText(DisguiseUtilities.getColoredChat(LibsMsg.ACTION_BAR_MESSAGE.get(getDisguiseName()))), getBossBarColor(),
+                getBossBarStyle());
         bar.setProgress(1);
         bar.addPlayer((Player) getEntity());
     }
@@ -738,10 +740,9 @@ public abstract class Disguise {
         }
 
         if (getInternalArmorstandIds().length > 0) {
-            PacketContainer packet = new PacketContainer(Server.ENTITY_DESTROY);
-            packet.getIntegerArrays().write(0, getInternalArmorstandIds());
-
             try {
+                PacketContainer packet = DisguiseUtilities.getDestroyPacket(getInternalArmorstandIds());
+
                 for (Player player : getEntity().getWorld().getPlayers()) {
                     ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
                 }

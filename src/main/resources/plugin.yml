@@ -57,6 +57,20 @@ commands:
     aliases: [dmodify, dmod, disgmodify, modifydisguise, moddisguise, mdisguise]
     permission: libsdisguises.seecmd.disguisemodify
     description: Modify your own disguise
+<<<<<<< HEAD
+=======
+  disguisemodifyplayer:
+    aliases: [dmodifyplayer, dmodplayer, disgmodifyplayer, dismodplayer, disgmodplayer, modifydisguiseplayer,
+              moddisguiseplayer, mdisguiseplayer, mdisgplayer, dmodifyuuid, dmoduuid, disgmodifyuuid, dismoduuid, disgmoduuid, modifydisguiseuuid,
+              moddisguiseuuid, mdisguiseuuid, mdisguuid]
+    permission: libsdisguises.seecmd.disguisemodifyplayer
+    description: Modify the disguise of a player
+  disguisemodifyradius:
+    aliases: [dmodifyradius, dmodradius, disgmodradius, dismodradius, modifydisguiseradius, modifydisgradius,
+              moddisguiseradius, mdisguiseradius, moddisgradius]
+    permission: libsdisguises.seecmd.disguisemodifyradius
+    description: Modify disguises in a radius
+>>>>>>> 8ca5fd862a0ede80ec7732d3746322bd4176f8ea
   disguisemodifyentity:
     aliases: [dmodifyentity, dmodentity, disgmodentity, dismodentity, modifydisguiseentity, modifydisgentity,
               modifydentity, moddisguiseentity, moddisgentity, mdisguiseentity, mdisgentity]
