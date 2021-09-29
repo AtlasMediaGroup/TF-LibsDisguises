@@ -11,6 +11,7 @@ import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -29,7 +30,9 @@ public class GrabSkinCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String s, String[] strings) {
         if (sender instanceof Player && !sender.isOp() &&
                 (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
-            sender.sendMessage(ChatColor.RED + "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for non-admin usage!");
+            sender.sendMessage(ChatColor.RED +
+                    "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for " +
+                    "non-admin usage!");
             return true;
         }
 
@@ -54,8 +57,15 @@ public class GrabSkinCommand implements CommandExecutor {
             return true;
         }
 
-        if (tName == null && skin.matches("(.*\\/)?[a-zA-Z0-9_-]{3,20}\\.png")) {
-            tName = skin.substring(skin.lastIndexOf("/") + 1, skin.lastIndexOf("."));
+        if (tName == null && skin.matches("(.*\\/)?[a-zA-Z0-9_-]{3,20}(\\.png)?")) {
+            int start = skin.lastIndexOf("/") + 1;
+            int end = skin.length();
+
+            if (skin.lastIndexOf(".", start) > start) {
+                end = skin.lastIndexOf(".", start);
+            }
+
+            tName = skin.substring(start, end);
 
             if (DisguiseUtilities.hasGameProfile(tName)) {
                 tName = null;
@@ -87,6 +97,7 @@ public class GrabSkinCommand implements CommandExecutor {
             @Override
             public void onSuccess(WrappedGameProfile profile) {
                 runnable.cancel();
+                DisguiseUtilities.doSkinUUIDWarning(sender);
 
                 String nName = name;
 
@@ -101,8 +112,7 @@ public class GrabSkinCommand implements CommandExecutor {
                 }
 
                 if (profile.getName() == null || !profile.getName().equals(nName)) {
-                    profile = ReflectionManager
-                            .getGameProfileWithThisSkin(profile.getUUID(), profile.getName(), profile);
+                    profile = ReflectionManager.getGameProfileWithThisSkin(profile.getUUID(), profile.getName(), profile);
                 }
 
                 DisguiseAPI.addGameProfile(nName, profile);
@@ -112,32 +122,31 @@ public class GrabSkinCommand implements CommandExecutor {
                 int start = 0;
                 int msg = 1;
 
-               //if (NmsVersion.v1_13.isSupported()) {
-                    ComponentBuilder builder = new ComponentBuilder("").appendLegacy(LibsMsg.CLICK_TO_COPY.get());
+                //if (NmsVersion.v1_13.isSupported()) {
+                ComponentBuilder builder = new ComponentBuilder("").append(TextComponent.fromLegacyText(LibsMsg.CLICK_TO_COPY.get()));
 
-                    while (start < string.length()) {
-                        int end = Math.min(256, string.length() - start);
+                while (start < string.length()) {
+                    int end = Math.min(256, string.length() - start);
 
-                        String sub = string.substring(start, start + end);
+                    String sub = string.substring(start, start + end);
 
-                        builder.append(" ");
+                    builder.append(" ");
 
-                        if (string.length() <= 256) {
-                            builder.appendLegacy(LibsMsg.CLICK_TO_COPY_DATA.get());
-                        } else {
-                            builder.reset();
-                            builder.appendLegacy(LibsMsg.CLICK_COPY.get(msg));
-                        }
-
-                        start += end;
-
-                        builder.event(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, sub));
-                        builder.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                new ComponentBuilder(LibsMsg.CLICK_TO_COPY_HOVER.get() + " " + msg).create()));
-                        msg += 1;
+                    if (string.length() <= 256) {
+                        builder.append(TextComponent.fromLegacyText(LibsMsg.CLICK_TO_COPY_DATA.get()));
+                    } else {
+                        builder.reset();
+                        builder.append(TextComponent.fromLegacyText(LibsMsg.CLICK_COPY.get(msg)));
                     }
 
-                    sender.spigot().sendMessage(builder.create());
+                    start += end;
+
+                    builder.event(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, sub));
+                    builder.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(LibsMsg.CLICK_TO_COPY_HOVER.get() + " " + msg).create()));
+                    msg += 1;
+                }
+
+                sender.spigot().sendMessage(builder.create());
                 /*} else {
                     LibsMsg.SKIN_DATA.send(sender, string);
                 }*/

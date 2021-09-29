@@ -49,6 +49,10 @@ public class DisguiseEntityCommand extends DisguiseBaseCommand implements TabCom
             return true;
         }
 
+        if (hasHitRateLimit(sender)) {
+            return true;
+        }
+
         String[] disguiseArgs = DisguiseUtilities.split(StringUtils.join(args, " "));
         Disguise testDisguise;
 
@@ -65,9 +69,7 @@ public class DisguiseEntityCommand extends DisguiseBaseCommand implements TabCom
             }
 
             return true;
-        }
-        catch (IllegalAccessException | InvocationTargetException ex)
-        {
+        } catch (Throwable ex) {
             ex.printStackTrace();
             return true;
         }
@@ -130,8 +132,7 @@ public class DisguiseEntityCommand extends DisguiseBaseCommand implements TabCom
         }
 
         LibsMsg.DISG_ENT_HELP1.send(sender);
-        LibsMsg.CAN_USE_DISGS.send(sender,
-                StringUtils.join(allowedDisguises, LibsMsg.CAN_USE_DISGS_SEPERATOR.get()));
+        LibsMsg.CAN_USE_DISGS.send(sender, StringUtils.join(allowedDisguises, LibsMsg.CAN_USE_DISGS_SEPERATOR.get()));
 
         if (allowedDisguises.contains("player"))
         {

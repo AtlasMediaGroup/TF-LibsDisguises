@@ -9,3 +9,6 @@ ReleaseBuild: %data%
 # Make sure the plugin aint spamming update requests
 LastUpdateCheck: %data%
 HittingRateLimit: %data%
+LastGithubETag: %data%
+LastPluginVersion: %data%
+Data: %data%

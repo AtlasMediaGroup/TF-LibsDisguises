@@ -68,7 +68,7 @@ public class DisguiseModifyCommand extends DisguiseBaseCommand implements TabCom
 
             return true;
         }
-        catch (Exception ex) {
+        catch (Throwable ex) {
             ex.printStackTrace();
             return true;
         }
@@ -106,8 +106,8 @@ public class DisguiseModifyCommand extends DisguiseBaseCommand implements TabCom
     protected void sendCommandUsage(CommandSender sender, DisguisePermissions permissions) {
         ArrayList<String> allowedDisguises = getAllowedDisguises(permissions);
 
-        LibsMsg.DMODIFY_HELP3.send(sender);
-        LibsMsg.DMODIFY_HELP3.send(sender);
+        LibsMsg.DMODIFY_HELP1.send(sender);
+        LibsMsg.DMODIFY_HELP2.send(sender);
         LibsMsg.DMODIFY_HELP3.send(sender,
                 StringUtils.join(allowedDisguises, LibsMsg.CAN_USE_DISGS_SEPERATOR.get()));
     }

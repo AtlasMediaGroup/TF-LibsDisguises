@@ -1,6 +1,8 @@
 package me.libraryaddict.disguise.commands;
 
 import com.comphenix.protocol.ProtocolLibrary;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import me.libraryaddict.disguise.BlockedDisguises;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.commands.disguise.DisguiseCommand;
@@ -15,22 +17,25 @@ import me.libraryaddict.disguise.utilities.params.ParamInfoManager;
 import me.libraryaddict.disguise.utilities.parser.DisguiseParser;
 import me.libraryaddict.disguise.utilities.parser.DisguisePerm;
 import me.libraryaddict.disguise.utilities.parser.DisguisePermissions;
+import me.libraryaddict.disguise.utilities.parser.WatcherMethod;
+import me.libraryaddict.disguise.utilities.translations.LibsMsg;
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author libraryaddict
  */
 public abstract class DisguiseBaseCommand implements CommandExecutor {
     private static final Map<Class<? extends DisguiseBaseCommand>, String> disguiseCommands;
+    private final Cache<UUID, Long> rateLimit = CacheBuilder.newBuilder().expireAfterWrite(500, TimeUnit.MILLISECONDS).build();
 
     static {
         HashMap<Class<? extends DisguiseBaseCommand>, String> map = new HashMap<>();
@@ -43,18 +48,31 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
         disguiseCommands = map;
     }
 
+    protected boolean hasHitRateLimit(CommandSender sender) {
+        if (sender.isOp() || !(sender instanceof Player) || sender.hasPermission("libsdisguises.ratelimitbypass")) {
+            return false;
+        }
+
+        if (rateLimit.getIfPresent(((Player) sender).getUniqueId()) != null) {
+            LibsMsg.TOO_FAST.send(sender);
+            return true;
+        }
+
+        rateLimit.put(((Player) sender).getUniqueId(), System.currentTimeMillis());
+        return false;
+    }
+
     protected boolean isNotPremium(CommandSender sender) {
-        String requiredProtocolLib = DisguiseUtilities.getProtocolLibRequiredVersion();
+        String requiredProtocolLib = StringUtils.join(DisguiseUtilities.getProtocolLibRequiredVersion(), " or build #");
         String version = ProtocolLibrary.getPlugin().getDescription().getVersion();
 
-        if (DisguiseUtilities.isOlderThan(requiredProtocolLib, version)) {
+        if (DisguiseUtilities.isProtocolLibOutdated()) {
             DisguiseUtilities.sendProtocolLibUpdateMessage(sender, version, requiredProtocolLib);
         }
 
         if (sender instanceof Player && !sender.isOp() &&
                 (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
-            sender.sendMessage(ChatColor.RED +
-                    "This is the free version of Lib's Disguises, player commands are limited to console and " +
+            sender.sendMessage(ChatColor.RED + "This is the free version of Lib's Disguises, player commands are limited to console and " +
                     "Operators only! Purchase the plugin for non-admin usage!");
             return true;
         }
@@ -62,8 +80,7 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
         return false;
     }
 
-    protected List<String> getTabDisguiseTypes(CommandSender sender, DisguisePermissions perms, String[] allArgs,
-            int startsAt, String currentArg) {
+    protected List<String> getTabDisguiseTypes(CommandSender sender, DisguisePermissions perms, String[] allArgs, int startsAt, String currentArg) {
         // If not enough arguments to get current disguise type
         if (allArgs.length <= startsAt) {
             return getAllowedDisguises(perms);
@@ -79,8 +96,7 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
 
         // If current argument is just after the disguise type, and disguise type is a player which is not a custom
         // disguise
-        if (allArgs.length == startsAt + 1 && disguiseType.getType() == DisguiseType.PLAYER &&
-                !disguiseType.isCustomDisguise()) {
+        if (allArgs.length == startsAt + 1 && disguiseType.getType() == DisguiseType.PLAYER && !disguiseType.isCustomDisguise()) {
             ArrayList<String> tabs = new ArrayList<>();
 
             // Add all player names to tab list
@@ -97,8 +113,7 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
             return tabs;
         }
 
-        return getTabDisguiseOptions(sender, perms, disguiseType, allArgs, startsAt + (disguiseType.isPlayer() ? 2 : 1),
-                currentArg);
+        return getTabDisguiseOptions(sender, perms, disguiseType, allArgs, startsAt + (disguiseType.isPlayer() ? 2 : 1), currentArg);
     }
 
     /**
@@ -108,15 +123,15 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
      * @param startsAt     What index this starts at
      * @return a list of viable disguise options
      */
-    protected List<String> getTabDisguiseOptions(CommandSender commandSender, DisguisePermissions perms,
-            DisguisePerm disguisePerm, String[] allArgs, int startsAt, String currentArg) {
+    protected List<String> getTabDisguiseOptions(CommandSender commandSender, DisguisePermissions perms, DisguisePerm disguisePerm, String[] allArgs,
+                                                 int startsAt, String currentArg) {
         ArrayList<String> usedOptions = new ArrayList<>();
 
-        Method[] methods = ParamInfoManager.getDisguiseWatcherMethods(disguisePerm.getWatcherClass());
+        WatcherMethod[] methods = ParamInfoManager.getDisguiseWatcherMethods(disguisePerm.getWatcherClass());
 
         // Find which methods the disguiser has already used
         for (int i = startsAt; i < allArgs.length; i++) {
-            for (Method method : methods) {
+            for (WatcherMethod method : methods) {
                 String arg = allArgs[i];
 
                 if (!method.getName().equalsIgnoreCase(arg)) {
@@ -136,8 +151,8 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
         return getTabDisguiseSubOptions(commandSender, perms, disguisePerm, allArgs, startsAt, currentArg);
     }
 
-    protected List<String> getTabDisguiseSubOptions(CommandSender commandSender, DisguisePermissions perms,
-            DisguisePerm disguisePerm, String[] allArgs, int startsAt, String currentArg) {
+    protected List<String> getTabDisguiseSubOptions(CommandSender commandSender, DisguisePermissions perms, DisguisePerm disguisePerm, String[] allArgs,
+                                                    int startsAt, String currentArg) {
         boolean addMethods = true;
         List<String> tabs = new ArrayList<>();
 
@@ -180,7 +195,7 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
 
         if (addMethods) {
             // If this is a method, add. Else if it can be a param of the previous argument, add.
-            for (Method method : ParamInfoManager.getDisguiseWatcherMethods(disguisePerm.getWatcherClass())) {
+            for (WatcherMethod method : ParamInfoManager.getDisguiseWatcherMethods(disguisePerm.getWatcherClass())) {
                 if (!perms.isAllowedDisguise(disguisePerm, Collections.singletonList(method.getName()))) {
                     continue;
                 }
@@ -193,8 +208,9 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
     }
 
     protected List<String> filterTabs(List<String> list, String[] origArgs) {
-        if (origArgs.length == 0)
+        if (origArgs.length == 0) {
             return list;
+        }
 
         Iterator<String> itel = list.iterator();
         String label = origArgs[origArgs.length - 1].toLowerCase(Locale.ENGLISH);
@@ -202,8 +218,9 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
         while (itel.hasNext()) {
             String name = itel.next();
 
-            if (name.toLowerCase(Locale.ENGLISH).startsWith(label))
+            if (name.toLowerCase(Locale.ENGLISH).startsWith(label)) {
                 continue;
+            }
 
             itel.remove();
         }
@@ -218,15 +235,16 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
             name = name.replace("%complex%", DisguiseUtilities.getDisplayName(player));
         }
 
-        return ChatColor.translateAlternateColorCodes('&', name);
+        return DisguiseUtilities.translateAlternateColorCodes(name);
     }
 
     protected ArrayList<String> getAllowedDisguises(DisguisePermissions permissions) {
         ArrayList<String> allowedDisguises = new ArrayList<>();
 
         for (DisguisePerm type : permissions.getAllowed()) {
-            if (type.isUnknown())
+            if (type.isUnknown()) {
                 continue;
+            }
 
             final String name = type.toReadable().replaceAll(" ", "_");
 
@@ -248,8 +266,9 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
         for (int i = 0; i < args.length - 1; i++) {
             String s = args[i];
 
-            if (s.trim().isEmpty())
+            if (s.trim().isEmpty()) {
                 continue;
+            }
 
             newArgs.add(s);
         }
@@ -287,8 +306,7 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
         try {
             Integer.parseInt(string);
             return true;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             return false;
         }
     }

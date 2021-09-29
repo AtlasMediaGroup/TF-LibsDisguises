@@ -39,20 +39,22 @@ public class DisguiseCommand extends DisguiseBaseCommand implements TabCompleter
             return true;
         }
 
+        if (hasHitRateLimit(sender)) {
+            return true;
+        }
+
         Disguise disguise;
 
         try {
-            disguise = DisguiseParser.parseDisguise(sender, (Entity) sender, getPermNode(),
-                    DisguiseUtilities.split(StringUtils.join(args, " ")), getPermissions(sender));
-        }
-        catch (DisguiseParseException ex) {
+            disguise = DisguiseParser
+                    .parseDisguise(sender, (Entity) sender, getPermNode(), DisguiseUtilities.split(StringUtils.join(args, " ")), getPermissions(sender));
+        } catch (DisguiseParseException ex) {
             if (ex.getMessage() != null) {
                 DisguiseUtilities.sendMessage(sender, ex.getMessage());
             }
 
             return true;
-        }
-        catch (Exception ex) {
+        } catch (Throwable ex) {
             ex.printStackTrace();
             return true;
         }
@@ -82,16 +84,16 @@ public class DisguiseCommand extends DisguiseBaseCommand implements TabCompleter
 
         if (!setViewDisguise(args)) {
             // They prefer to have the opposite of whatever the view disguises option is
-            if (DisguiseAPI.hasSelfDisguisePreference(disguise.getEntity()) &&
-                    disguise.isSelfDisguiseVisible() == DisguiseConfig.isViewDisguises())
+            if (DisguiseAPI.hasSelfDisguisePreference(disguise.getEntity()) && disguise.isSelfDisguiseVisible() == DisguiseConfig.isViewSelfDisguisesDefault()) {
                 disguise.setViewSelfDisguise(!disguise.isSelfDisguiseVisible());
+            }
         }
 
         if (!DisguiseAPI.isActionBarShown(disguise.getEntity())) {
             disguise.setNotifyBar(DisguiseConfig.NotifyBar.NONE);
         }
 
-        disguise.startDisguise();
+        disguise.startDisguise(sender);
 
         if (disguise.isDisguiseInUse()) {
             LibsMsg.DISGUISED.send(sender, disguise.getDisguiseName());
@@ -104,8 +106,9 @@ public class DisguiseCommand extends DisguiseBaseCommand implements TabCompleter
 
     private boolean setViewDisguise(String[] strings) {
         for (String string : strings) {
-            if (!string.equalsIgnoreCase("setSelfDisguiseVisible"))
+            if (!string.equalsIgnoreCase("setSelfDisguiseVisible")) {
                 continue;
+            }
 
             return true;
         }

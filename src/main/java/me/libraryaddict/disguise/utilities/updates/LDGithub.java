@@ -6,7 +6,6 @@ import lombok.Getter;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
-import me.libraryaddict.disguise.utilities.LibsPremium;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +15,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -57,95 +56,56 @@ public class LDGithub {
     @Getter
     private UpdateChecker checker;
 
-    private String[] getBadUsers() {
-        // List of bad users that need to redownload Libs Disguises
-
-        try {
-            // We're connecting to md_5's jenkins REST api
-            URL url = new URL("https://api.github.com/repos/libraryaddict/libsdisguises/issues/469");
-            // Creating a connection
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestProperty("User-Agent", "libraryaddict/LibsDisguises");
-            con.setRequestProperty("Accept", "application/vnd.github.v3+json");
-
-            HashMap<String, Object> map;
-
-            // Get the input stream, what we receive
-            try (InputStream input = con.getInputStream()) {
-                // Read it to string
-                String json = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines()
-                        .collect(Collectors.joining("\n"));
-
-                map = new Gson().fromJson(json, HashMap.class);
-            }
-
-            if (!map.containsKey("body")) {
-                return new String[0];
-            }
-
-            return ((String) map.get("body")).split("(\\r|\\n)+");
-        } catch (Exception ignored) {
-        }
-
-        return new String[0];
-    }
-
     public DisguiseUpdate getLatestRelease() {
         try {
-            String[] users = getBadUsers();
-
-            for (String s : users) {
-                if (LibsPremium.getPaidInformation() != null &&
-                        (s.equals(LibsPremium.getPaidInformation().getDownloadID()) ||
-                                s.equals(LibsPremium.getPaidInformation().getUserID()))) {
-                    LibsDisguises.getInstance().unregisterCommands(true);
-                } else {
-                    if (LibsPremium.getUserID() == null ||
-                            (!s.equals(LibsPremium.getUserID()) && !s.equals(LibsPremium.getDownloadID()))) {
-                        continue;
-                    }
-
-                    getChecker().setGoSilent(true);
-                }
-            }
+            String ourVersion = LibsDisguises.getInstance().getDescription().getVersion();
 
             if (!getChecker().isGoSilent()) {
                 DisguiseUtilities.getLogger().info("Now looking for update on Github..");
             }
 
-            // We're connecting to md_5's jenkins REST api
+            // We're connecting to githubs REST api
             URL url = new URL("https://api.github.com/repos/libraryaddict/LibsDisguises/releases/latest");
             // Creating a connection
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestProperty("User-Agent", "libraryaddict/LibsDisguises");
             con.setRequestProperty("Accept", "application/vnd.github.v3+json");
 
+            // We believe we're on the latest version and know what the last etag was
+            if (Objects.equals(ourVersion, DisguiseConfig.getLastPluginUpdateVersion()) && DisguiseConfig.getLastGithubUpdateETag() != null) {
+                con.setRequestProperty("If-None-Match", DisguiseConfig.getLastGithubUpdateETag());
+            }
+
+            if (con.getResponseCode() == 304) {
+                // Its the same as the last one we checked
+                return null;
+            }
+
             GithubData gitData;
 
             // Get the input stream, what we receive
             try (InputStream input = con.getInputStream()) {
                 // Read it to string
-                String json = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines()
-                        .collect(Collectors.joining("\n"));
+                String json = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
 
                 gitData = new Gson().fromJson(json, GithubData.class);
             } catch (IOException ex) {
                 try (InputStream error = con.getErrorStream()) {
-                    String line = new BufferedReader(new InputStreamReader(error, StandardCharsets.UTF_8)).lines()
-                            .collect(Collectors.joining("\n"));
+                    String line = new BufferedReader(new InputStreamReader(error, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
 
                     DisguiseUtilities.getLogger().severe("Error with Github! " + line);
 
                     if (line.contains("rate limit") && !DisguiseConfig.isHittingRateLimit()) {
                         DisguiseConfig.setHittingRateLimit(true);
                         DisguiseUtilities.getLogger().severe("Changed update checker to be every 36 hours due to rate limiting from this IP");
+                        return null;
                     }
                 } catch (Exception ex1) {
                     DisguiseUtilities.getLogger().severe("Error when trying to read error stream! Inception!");
                     ex1.printStackTrace();
                 }
 
-                throw ex;
+                return null;
             }
 
             String download = null;
@@ -163,8 +123,15 @@ public class LDGithub {
                 throw new IllegalStateException("Download url is missing");
             }
 
-            return new GithubUpdate(gitData.getTag_name().replace("v", ""), gitData.getBody().split("(\\r|\\n)+"),
-                    download);
+            GithubUpdate update = new GithubUpdate(gitData.getTag_name().replace("v", ""), gitData.getBody().split("(\\r|\\n)+"), download);
+
+            if (Objects.equals(update.getVersion(), ourVersion)) {
+                DisguiseConfig.setLastGithubUpdateETag(con.getHeaderField("ETag"));
+                DisguiseConfig.setLastPluginUpdateVersion(ourVersion);
+                DisguiseConfig.saveInternalConfig();
+            }
+
+            return update;
         } catch (Exception ex) {
             DisguiseUtilities.getLogger().warning("Failed to check for a release on Github");
             ex.printStackTrace();

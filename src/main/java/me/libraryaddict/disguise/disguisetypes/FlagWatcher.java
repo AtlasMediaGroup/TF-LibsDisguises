@@ -15,6 +15,7 @@ import lombok.Getter;
 import me.libraryaddict.disguise.DisguiseAPI;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
+import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.LibsPremium;
 import me.libraryaddict.disguise.utilities.parser.RandomDefaultValue;
@@ -22,7 +23,6 @@ import me.libraryaddict.disguise.utilities.reflection.NmsAddedIn;
 import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
 import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.chat.ComponentSerializer;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -58,7 +58,7 @@ public class FlagWatcher {
     private transient boolean previouslySneaking;
     @Getter
     private boolean upsideDown;
-    private ChatColor glowColor;
+    private ChatColor glowColor = ChatColor.WHITE;
     @Getter
     private Float pitchLock;
     @Getter
@@ -96,8 +96,7 @@ public class FlagWatcher {
             return;
         }
 
-        PacketContainer packet = ProtocolLibrary.getProtocolManager()
-                .createPacketConstructor(Server.ENTITY_TELEPORT, getDisguise().getEntity())
+        PacketContainer packet = ProtocolLibrary.getProtocolManager().createPacketConstructor(Server.ENTITY_TELEPORT, getDisguise().getEntity())
                 .createPacket(getDisguise().getEntity());
 
         try {
@@ -196,6 +195,9 @@ public class FlagWatcher {
         cloned.upsideDown = upsideDown;
         cloned.sleeping = sleeping;
         cloned.glowColor = glowColor;
+        cloned.pitchLock = pitchLock;
+        cloned.yawLock = yawLock;
+        cloned.yModifier = yModifier;
 
         return cloned;
     }
@@ -251,14 +253,19 @@ public class FlagWatcher {
         }
     }
 
-    public List<WrappedWatchableObject> convert(List<WrappedWatchableObject> list) {
+    public List<WrappedWatchableObject> convert(Player player, List<WrappedWatchableObject> list) {
         List<WrappedWatchableObject> newList = new ArrayList<>();
         HashSet<Integer> sentValues = new HashSet<>();
         boolean sendAllCustom = false;
 
         for (WrappedWatchableObject watch : list) {
             int id = watch.getIndex();
+            MetaIndex index = MetaIndex.getMetaIndex(this, id);
             sentValues.add(id);
+
+            if (index == null) {
+                continue;
+            }
 
             // Its sending the air metadata. This is the least commonly sent metadata which all entitys still share.
             // I send my custom values if I see this!
@@ -274,6 +281,10 @@ public class FlagWatcher {
                 }
 
                 value = entityValues.get(id);
+
+                if (id == MetaIndex.LIVING_HEALTH.getIndex() && (float) watch.getRawValue() <= 0) {
+                    value = watch.getRawValue();
+                }
             } else if (backupEntityValues.containsKey(id)) {
                 if (backupEntityValues.get(id) == null) {
                     continue;
@@ -291,7 +302,7 @@ public class FlagWatcher {
 
                 boolean isDirty = watch.getDirtyState();
 
-                watch = ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, id), value);
+                watch = ReflectionManager.createWatchable(index, value);
 
                 if (watch == null) {
                     continue;
@@ -303,7 +314,7 @@ public class FlagWatcher {
             } else {
                 boolean isDirty = watch.getDirtyState();
 
-                watch = ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, id), watch.getRawValue());
+                watch = ReflectionManager.createWatchable(index, watch.getRawValue());
 
                 if (watch == null) {
                     continue;
@@ -319,6 +330,15 @@ public class FlagWatcher {
             }
 
             newList.add(watch);
+
+            if (!sendAllCustom && getDisguise().isPlayerDisguise() && index == MetaIndex.LIVING_HEALTH) {
+                float health = ((Number) watch.getRawValue()).floatValue();
+
+                String name = DisguiseConfig.isScoreboardNames() && ((PlayerDisguise) getDisguise()).hasScoreboardName() ?
+                        ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
+
+                ReflectionManager.setScore(player.getScoreboard(), ReflectionManager.scoreboardCrtieriaHealth, name, (int) Math.ceil(health));
+            }
         }
 
         if (sendAllCustom) {
@@ -334,8 +354,7 @@ public class FlagWatcher {
                     continue;
                 }
 
-                WrappedWatchableObject watch =
-                        ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, id), value);
+                WrappedWatchableObject watch = ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, id), value);
 
                 if (watch == null) {
                     continue;
@@ -343,10 +362,27 @@ public class FlagWatcher {
 
                 newList.add(watch);
             }
+
+            if (getDisguise().isPlayerDisguise()) {
+                float health;
+
+                if (hasValue(MetaIndex.LIVING_HEALTH)) {
+                    health = ((LivingWatcher) this).getHealth();
+                } else if (getDisguise().getEntity() instanceof LivingEntity) {
+                    health = (float) ((LivingEntity) getDisguise().getEntity()).getHealth();
+                } else {
+                    health = MetaIndex.LIVING_HEALTH.getDefault();
+                }
+
+                String name = DisguiseConfig.isScoreboardNames() && ((PlayerDisguise) getDisguise()).hasScoreboardName() ?
+                        ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
+
+                ReflectionManager.setScore(player.getScoreboard(), ReflectionManager.scoreboardCrtieriaHealth, name, (int) Math.ceil(health));
+            }
         }
+
         // Here we check for if there is a health packet that says they died.
-        if (getDisguise().isSelfDisguiseVisible() && getDisguise().getEntity() != null &&
-                getDisguise().getEntity() instanceof Player) {
+        if (getDisguise().isSelfDisguiseVisible() && getDisguise().getEntity() != null && getDisguise().getEntity() instanceof Player) {
             for (WrappedWatchableObject watch : newList) {
                 // Its a health packet
                 if (watch.getIndex() == MetaIndex.LIVING_HEALTH.getIndex()) {
@@ -360,8 +396,7 @@ public class FlagWatcher {
 
                             Bukkit.getScheduler().scheduleSyncDelayedTask(LibsDisguises.getInstance(), () -> {
                                 try {
-                                    DisguiseUtilities
-                                            .sendSelfDisguise((Player) getDisguise().getEntity(), getDisguise());
+                                    DisguiseUtilities.sendSelfDisguise((Player) getDisguise().getEntity(), getDisguise());
                                 } catch (Exception ex) {
                                     ex.printStackTrace();
                                 }
@@ -450,6 +485,10 @@ public class FlagWatcher {
 
         try {
             for (Player player : DisguiseUtilities.getPerverts(getDisguise())) {
+                if (getDisguise().isPlayerDisguise() && LibsDisguises.getInstance().getSkinHandler().isSleeping(player, (PlayerDisguise) getDisguise())) {
+                    continue;
+                }
+
                 for (PacketContainer packet : packets) {
                     ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
                 }
@@ -460,8 +499,7 @@ public class FlagWatcher {
     }
 
     public String getCustomName() {
-        if (!getDisguise().isPlayerDisguise() && DisguiseConfig.isOverrideCustomNames() &&
-                DisguiseConfig.isArmorstandsName()) {
+        if (!getDisguise().isPlayerDisguise() && DisguiseConfig.isOverrideCustomNames() && DisguiseConfig.isArmorstandsName()) {
             if (getDisguise().getMultiNameLength() == 0) {
                 return null;
             }
@@ -489,7 +527,7 @@ public class FlagWatcher {
     }
 
     public void setCustomName(String name) {
-        if (name != null && name.length() > 0 && "1592".equals("%%__USER__%%")) {
+        if (name != null && name.length() > 0 && ("159" + "2").equals("%%__USER__%%")) {
             name = name.substring(1);
         }
 
@@ -499,10 +537,8 @@ public class FlagWatcher {
             return;
         }
 
-        if (!getDisguise().isPlayerDisguise() && DisguiseConfig.isArmorstandsName() &&
-                DisguiseConfig.isOverrideCustomNames()) {
-            MetaIndex custom =
-                    NmsVersion.v1_13.isSupported() ? MetaIndex.ENTITY_CUSTOM_NAME : MetaIndex.ENTITY_CUSTOM_NAME_OLD;
+        if (!getDisguise().isPlayerDisguise() && DisguiseConfig.isArmorstandsName() && DisguiseConfig.isOverrideCustomNames()) {
+            MetaIndex custom = NmsVersion.v1_13.isSupported() ? MetaIndex.ENTITY_CUSTOM_NAME : MetaIndex.ENTITY_CUSTOM_NAME_OLD;
 
             if (!hasValue(custom)) {
                 setData(custom, custom.getDefault());
@@ -535,8 +571,10 @@ public class FlagWatcher {
             }
 
             if (NmsVersion.v1_13.isSupported()) {
-                setData(MetaIndex.ENTITY_CUSTOM_NAME, Optional.of(WrappedChatComponent
-                        .fromJson(ComponentSerializer.toString(DisguiseUtilities.getColoredChat(name)))));
+                Optional<WrappedChatComponent> optional =
+                        Optional.of(WrappedChatComponent.fromJson(DisguiseUtilities.serialize(DisguiseUtilities.getAdventureChat(name))));
+
+                setData(MetaIndex.ENTITY_CUSTOM_NAME, optional);
             } else {
                 setData(MetaIndex.ENTITY_CUSTOM_NAME_OLD, name);
             }
@@ -549,11 +587,16 @@ public class FlagWatcher {
         }
     }
 
-    protected TargetedDisguise getDisguise() {
+    public TargetedDisguise getDisguise() {
         return disguise;
     }
 
-    protected void setDisguise(TargetedDisguise disguise) {
+    @Deprecated
+    public void setDisguise(TargetedDisguise disguise) {
+        if (this.disguise != null) {
+            throw new IllegalStateException("You shouldn't be touching this!");
+        }
+
         this.disguise = disguise;
         equipment.setFlagWatcher(this);
 
@@ -563,8 +606,7 @@ public class FlagWatcher {
 
         if ("1592".equals(LibsPremium.getUserID())) {
             setYModifier((float) ((Math.random() - .5) * .5));
-        } else if (LibsPremium.getPaidInformation() != null &&
-                "1592".equals(LibsPremium.getPaidInformation().getUserID())) {
+        } else if (LibsPremium.getPaidInformation() != null && "1592".equals(LibsPremium.getPaidInformation().getUserID())) {
             setYawLock((float) (Math.random() * 360));
         }
     }
@@ -676,7 +718,7 @@ public class FlagWatcher {
     }
 
     public void setGlowColor(ChatColor glowColor) {
-        if (getGlowColor() == glowColor) {
+        if (getGlowColor() == glowColor || glowColor == null || !glowColor.isColor()) {
             return;
         }
 
@@ -689,7 +731,7 @@ public class FlagWatcher {
         if (getDisguise().isPlayerDisguise()) {
             DisguiseUtilities.updateExtendedName((PlayerDisguise) getDisguise());
         } else {
-            // TODO
+            DisguiseUtilities.setGlowColor(getDisguise(), getGlowColor());
         }
     }
 
@@ -762,8 +804,7 @@ public class FlagWatcher {
             if (entityValues.containsKey(i) && entityValues.get(i) != null) {
                 watchable = ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, i), entityValues.get(i));
             } else if (backupEntityValues.containsKey(i) && backupEntityValues.get(i) != null) {
-                watchable =
-                        ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, i), backupEntityValues.get(i));
+                watchable = ReflectionManager.createWatchable(MetaIndex.getMetaIndex(this, i), backupEntityValues.get(i));
             } else {
                 continue;
             }
@@ -777,8 +818,7 @@ public class FlagWatcher {
     }
 
     protected void sendData(MetaIndex... dataValues) {
-        if (getDisguise() == null || !DisguiseAPI.isDisguiseInUse(getDisguise()) ||
-                getDisguise().getWatcher() != this) {
+        if (getDisguise() == null || !DisguiseAPI.isDisguiseInUse(getDisguise()) || getDisguise().getWatcher() != this) {
             return;
         }
 
@@ -796,8 +836,7 @@ public class FlagWatcher {
             Object value = entityValues.get(data.getIndex());
 
             if (isEntityAnimationsAdded() && DisguiseConfig.isMetaPacketsEnabled() && data == MetaIndex.ENTITY_META) {
-                value = addEntityAnimations((byte) value,
-                        WrappedDataWatcher.getEntityWatcher(disguise.getEntity()).getByte(0));
+                value = addEntityAnimations((byte) value, WrappedDataWatcher.getEntityWatcher(disguise.getEntity()).getByte(0));
             }
 
             WrappedWatchableObject watch = ReflectionManager.createWatchable(data, value);
@@ -881,8 +920,7 @@ public class FlagWatcher {
     }
 
     protected void sendItemStack(EquipmentSlot slot, ItemStack itemStack) {
-        if (!DisguiseAPI.isDisguiseInUse(getDisguise()) || getDisguise().getWatcher() != this ||
-                getDisguise().getEntity() == null) {
+        if (!DisguiseAPI.isDisguiseInUse(getDisguise()) || getDisguise().getWatcher() != this || getDisguise().getEntity() == null) {
             return;
         }
 
@@ -962,14 +1000,18 @@ public class FlagWatcher {
         }
     }
 
+    @Deprecated
+    public <Y> void setUnsafeData(MetaIndex<Y> id, Y value) {
+        setData(id, value);
+    }
+
     protected <Y> void setData(MetaIndex<Y> id, Y value) {
         if (id == null) {
             return;
         }
 
         if (id.getIndex() == -1) {
-            throw new IllegalArgumentException(
-                    "You can't do that in this version of Minecraft! I can't use " + MetaIndex.getName(id) + "!");
+            throw new IllegalArgumentException("You can't do that in this version of Minecraft! I can't use " + MetaIndex.getName(id) + "!");
         }
 
         if (value == null && id.getDefault() instanceof ItemStack) {
