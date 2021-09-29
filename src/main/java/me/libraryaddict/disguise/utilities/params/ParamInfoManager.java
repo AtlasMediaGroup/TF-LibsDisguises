@@ -3,6 +3,7 @@ package me.libraryaddict.disguise.utilities.params;
 import lombok.Getter;
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
 import me.libraryaddict.disguise.disguisetypes.FlagWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.EndermanWatcher;
 import me.libraryaddict.disguise.disguisetypes.watchers.FallingBlockWatcher;
 import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
 import me.libraryaddict.disguise.utilities.params.types.custom.ParamInfoItemBlock;
@@ -50,6 +51,11 @@ public class ParamInfoManager {
             return getParamInfoSoundGroup();
         }
 
+        // Enderman can't hold non-blocks
+        if (method.getWatcherClass() == EndermanWatcher.class && method.getName().equalsIgnoreCase("setItemInMainHand")) {
+            return getParamInfoItemBlock();
+        }
+
         if (method.getWatcherClass() == FallingBlockWatcher.class && (method.getParam() == Material.class || method.getParam() == ItemStack.class)) {
             return getParamInfoItemBlock();
         }
@@ -58,6 +64,10 @@ public class ParamInfoManager {
     }
 
     public static ParamInfo getParamInfo(Class c) {
+        if (c.isAnonymousClass()) {
+            c = c.getSuperclass();
+        }
+
         for (ParamInfo info : getParamInfos()) {
             if (!info.isParam(c)) {
                 continue;
@@ -96,11 +106,19 @@ public class ParamInfoManager {
     }
 
     public static WatcherMethod[] getDisguiseWatcherMethods(@Nullable Class<? extends FlagWatcher> watcherClass) {
+        return getDisguiseWatcherMethods(watcherClass, false);
+    }
+
+    public static WatcherMethod[] getDisguiseWatcherMethods(@Nullable Class<? extends FlagWatcher> watcherClass, boolean includeIgnored) {
         if (watcherClass == null) {
             return new WatcherMethod[0];
         }
 
         ArrayList<WatcherMethod> methods = new ArrayList<>(disguiseMethods.getMethods(watcherClass));
+
+        if (!includeIgnored) {
+            methods.removeIf(WatcherMethod::isHideFromTab);
+        }
 
         // Order first by their declaring class, the top class (SheepWatcher) goes before (FlagWatcher)
         // Order methods in the same watcher by their name from A to Z
@@ -114,8 +132,6 @@ public class ParamInfoManager {
 
             return String.CASE_INSENSITIVE_ORDER.compare(m1.getName(), m2.getName());
         });
-
-
 
         return methods.toArray(new WatcherMethod[0]);
     }

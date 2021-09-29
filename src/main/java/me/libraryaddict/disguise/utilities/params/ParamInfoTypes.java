@@ -31,8 +31,7 @@ import java.util.*;
  */
 public class ParamInfoTypes {
     public ParamInfoItemBlock getParamInfoBlock() {
-        return new ParamInfoItemBlock(ItemStack.class, "ItemStack", "ItemStack (Material,Amount?,Glow?)",
-                "An ItemStack compromised of Material,Amount,Glow. Only requires Material", getMaterials());
+        return new ParamInfoItemBlock(ItemStack.class, "ItemStack", "ItemStack (Material)", "An ItemStack compromised of Material", getMaterials());
     }
 
     public ParamInfoSoundGroup getParamInfoSoundGroup() {
@@ -96,6 +95,10 @@ public class ParamInfoTypes {
             paramInfos.add(new ParamInfoEnum(Panda.Gene.class, "Panda Gene", "The panda gene type"));
             paramInfos.add(new ParamInfoEnum(MushroomCow.Variant.class, "Mushroom Cow Variant",
                     "The different variants for mushroom cows"));
+
+            if (NmsVersion.v1_17.isSupported()) {
+                paramInfos.add(new ParamInfoEnum(Axolotl.Variant.class, "Axolotl Variant", "The variant of Axolotl"));
+            }
         } else {
             paramInfos.add(new ParamInfoEnum(Ocelot.Type.class, "Ocelot Type", "The type of ocelot"));
         }
@@ -129,7 +132,7 @@ public class ParamInfoTypes {
                 "Set how long the disguise lasts, <Num><Time><Num>... where <Time> is (s/sec)(m/min)(h/hour)(d/day) " +
                         "etc. 30m20secs = 30 minutes, 20 seconds"));
 
-        paramInfos.add(new ParamInfoEnum(ChatColor.class, "ChatColor", "A chat color"));
+        paramInfos.add(new ParamInfoChatColor(ChatColor.class, "ChatColor", "A chat color"));
         paramInfos.add(new ParamInfoEnum(GolemCrack.class, "Golem Cracked", "The stage a golem has been cracked"));
 
         // Register base types

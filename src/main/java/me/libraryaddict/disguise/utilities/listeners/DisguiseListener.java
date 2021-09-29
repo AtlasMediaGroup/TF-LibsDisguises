@@ -530,7 +530,7 @@ public class DisguiseListener implements Listener {
             DisguiseUtilities.doBoundingBox((TargetedDisguise) disguise);
         }
 
-        if (!NmsVersion.v1_17.isSupported() && DisguiseConfig.isStopShulkerDisguisesFromMoving()) {
+        if (DisguiseConfig.isStopShulkerDisguisesFromMoving()) {
             Disguise disguise;
 
             if ((disguise = DisguiseAPI.getDisguise(event.getPlayer())) != null) {

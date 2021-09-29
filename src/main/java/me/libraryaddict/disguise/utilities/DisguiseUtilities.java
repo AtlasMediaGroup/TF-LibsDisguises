@@ -478,8 +478,9 @@ public class DisguiseUtilities {
             return new String[]{"4.6.0"};
         }
 
-        // If we are on 1.17, future release build or this dev build
-        return new String[]{"4.7.0"};
+        // If we are on 1.17, you need this release or dev build
+        // ProtocolLib is a little funny in that it provides next release version as the current version
+        return new String[]{"4.7.0", "528"};
     }
 
     public static boolean isProtocolLibOutdated() {
@@ -1366,11 +1367,7 @@ public class DisguiseUtilities {
 
     public static void init() {
         try {
-            // Force an exception to be thrown if it doesn't contain trackedPlayerMap
-            Class tracker = ReflectionManager.getNmsClass("EntityTrackerEntry");
-            tracker.getDeclaredField("trackedPlayerMap");
-
-            // Don't really need this here, but it's insurance!
+            // Check if we enable the paperdisguiselistener
             runningPaper = Class.forName("com.destroystokyo.paper.VersionHistoryManager$VersionData") != null;
         } catch (Exception ignored) {
         }
@@ -1857,7 +1854,7 @@ public class DisguiseUtilities {
 
                 // TODO Store reflection fields
                 // If the tracker exists. Remove himself from his tracker
-                if (!runningPaper) {
+                if (!isRunningPaper() || NmsVersion.v1_17.isSupported()) {
                     Object trackedPlayersObj = ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayers").get(entityTrackerEntry);
 
                     ((Set<Object>) trackedPlayersObj).remove(ReflectionManager.getPlayerConnectionOrPlayer(player));
@@ -2396,7 +2393,7 @@ public class DisguiseUtilities {
 
             // TODO Store reflection fields
             // Check for code differences in PaperSpigot vs Spigot
-            if (!runningPaper) {
+            if (!isRunningPaper() || NmsVersion.v1_17.isSupported()) {
                 // Add himself to his own entity tracker
                 Object trackedPlayersObj = ReflectionManager.getNmsField("EntityTrackerEntry", "trackedPlayers").get(entityTrackerEntry);
 
@@ -2499,7 +2496,7 @@ public class DisguiseUtilities {
     }
 
     public static void sendMessage(CommandSender sender, LibsMsg msg, Object... args) {
-        BaseComponent[] components = msg.getChat(args);
+        BaseComponent[] components = msg.getBase(args);
 
         if (components.length > 0) {
             sender.spigot().sendMessage(components);
