@@ -1,5 +1,6 @@
 package me.libraryaddict.disguise.utilities.reflection;
 
+import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import org.bukkit.entity.Entity;
 
 import java.io.File;
@@ -54,16 +55,25 @@ public class ClassGetter {
 
         if (src != null) {
             URL resource = src.getLocation();
+            String path = resource.getPath().toLowerCase(Locale.ENGLISH);
 
-            if (resource.getPath().toLowerCase(Locale.ENGLISH).endsWith(".jar")) {
+            boolean isInsideJar = path.endsWith(".jar") || (path.contains(".jar!") && path.endsWith(".class"));
+
+            if (isInsideJar) {
                 processJarfile(resource, pkgname, classes);
             } else {
-                for (File f : new File(resource.getPath() + "/" + pkgname.replace(".", "/")).listFiles()) {
-                    if (f.getName().contains("$")) {
-                        continue;
-                    }
+                File[] baseFileList = new File(resource.getPath() + "/" + pkgname.replace(".", "/")).listFiles();
 
-                    classes.add(pkgname + "/" + f.getName());
+                if (baseFileList != null) {
+                    for (File f : baseFileList) {
+                        if (f.getName().contains("$")) {
+                            continue;
+                        }
+
+                        classes.add(pkgname + "/" + f.getName());
+                    }
+                } else {
+                    DisguiseUtilities.getLogger().severe("File not found for: " + resource.getPath() + "/" + pkgname.replace(".", "/"));
                 }
             }
         }
