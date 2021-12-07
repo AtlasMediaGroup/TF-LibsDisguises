@@ -3,7 +3,6 @@ package me.libraryaddict.disguise;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
-import lombok.Getter;
 import me.libraryaddict.disguise.disguisetypes.*;
 import me.libraryaddict.disguise.disguisetypes.TargetedDisguise.TargetType;
 import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
@@ -31,9 +30,16 @@ import java.util.List;
 import java.util.Map;
 
 public class DisguiseAPI {
-    private static int selfDisguiseId = ReflectionManager.getNewEntityId(true);
-    @Getter
-    private static int entityAttachmentId = ReflectionManager.getNewEntityId(true);
+    private static int selfDisguiseId;
+    private static int entityAttachmentId;
+
+    public static int getEntityAttachmentId() {
+        if (entityAttachmentId == 0) {
+            entityAttachmentId = ReflectionManager.getNewEntityId();
+        }
+
+        return entityAttachmentId;
+    }
 
     public static void addCustomDisguise(String disguiseName, String disguiseInfo) throws DisguiseParseException {
         // Dirty fix for anyone that somehow got this far with a . in the name, invalid yaml!
@@ -203,7 +209,7 @@ public class DisguiseAPI {
             disguise.setViewSelfDisguise(!disguise.isSelfDisguiseVisible());
         }
 
-        if (hasActionBarPreference(entity) && !isActionBarShown(entity)) {
+        if (hasActionBarPreference(entity) && !isNotifyBarShown(entity)) {
             disguise.setNotifyBar(DisguiseConfig.NotifyBar.NONE);
         }
 
@@ -376,6 +382,10 @@ public class DisguiseAPI {
     }
 
     public static int getSelfDisguiseId() {
+        if (selfDisguiseId == 0) {
+            selfDisguiseId = ReflectionManager.getNewEntityId();
+        }
+
         return selfDisguiseId;
     }
 
@@ -418,14 +428,22 @@ public class DisguiseAPI {
         return hasSelfDisguisePreference(entity) != DisguiseConfig.isViewSelfDisguisesDefault();
     }
 
+    @Deprecated
+    public static boolean isActionBarShown(Entity entity) {
+        return isNotifyBarShown(entity);
+    }
+
     /**
-     * Returns true if the entitiy has /disguiseviewself toggled on.
+     * Returns true if the entity wants to see the action bar / boss bar
      *
      * @param entity
      * @return
      */
-    public static boolean isActionBarShown(Entity entity) {
-        return !hasActionBarPreference(entity);
+    public static boolean isNotifyBarShown(Entity entity) {
+        // If default is no notify bar, but they toggled it. Then we want to show it.
+        // If default is a notify bar, but they toggled it. Then we want to hide it.
+
+        return (DisguiseConfig.getNotifyBar() == DisguiseConfig.NotifyBar.NONE) == hasActionBarPreference(entity);
     }
 
     public static boolean hasSelfDisguisePreference(Entity entity) {
