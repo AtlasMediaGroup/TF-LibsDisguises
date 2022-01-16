@@ -22,9 +22,9 @@ public class LibsDisguisesCommand implements CommandExecutor, TabCompleter {
 
     public LibsDisguisesCommand() {
         getCommands().add(new LDHelp(this));
-        getCommands().add(new LDReload());
-        getCommands().add(new LDUpdate());
-        getCommands().add(new LDChangelog());
+        // getCommands().add(new LDReload());
+        // getCommands().add(new LDUpdate());
+        // getCommands().add(new LDChangelog());
         getCommands().add(new LDCount());
         getCommands().add(new LDConfig());
         getCommands().add(new LDPermTest());
@@ -33,8 +33,8 @@ public class LibsDisguisesCommand implements CommandExecutor, TabCompleter {
         getCommands().add(new LDMods());
         getCommands().add(new LDMetaInfo());
         getCommands().add(new LDDebugPlayer());
-        getCommands().add(new LDUploadLogs());
-        getCommands().add(new LDUpdateProtocolLib());
+        // getCommands().add(new LDUploadLogs());
+        // getCommands().add(new LDUpdateProtocolLib());
         getCommands().add(new LDDebugMineSkin());
     }
 
