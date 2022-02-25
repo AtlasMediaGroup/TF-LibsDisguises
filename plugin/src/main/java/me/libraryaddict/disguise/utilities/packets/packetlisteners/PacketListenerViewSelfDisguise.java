@@ -27,10 +27,9 @@ import java.util.Map;
 
 public class PacketListenerViewSelfDisguise extends PacketAdapter {
     public PacketListenerViewSelfDisguise(LibsDisguises plugin) {
-        super(plugin, ListenerPriority.HIGH, Server.NAMED_ENTITY_SPAWN, Server.ATTACH_ENTITY, Server.REL_ENTITY_MOVE,
-                Server.REL_ENTITY_MOVE_LOOK, Server.ENTITY_LOOK, Server.ENTITY_TELEPORT, Server.ENTITY_HEAD_ROTATION,
-                Server.ENTITY_METADATA, Server.ENTITY_EQUIPMENT, Server.ANIMATION, Server.ENTITY_EFFECT,
-                Server.ENTITY_VELOCITY, Server.UPDATE_ATTRIBUTES, Server.ENTITY_STATUS);
+        super(plugin, ListenerPriority.HIGH, Server.NAMED_ENTITY_SPAWN, Server.ATTACH_ENTITY, Server.REL_ENTITY_MOVE, Server.REL_ENTITY_MOVE_LOOK,
+            Server.ENTITY_LOOK, Server.ENTITY_TELEPORT, Server.ENTITY_HEAD_ROTATION, Server.ENTITY_METADATA, Server.ENTITY_EQUIPMENT, Server.ANIMATION,
+            Server.ENTITY_EFFECT, Server.ENTITY_VELOCITY, Server.UPDATE_ATTRIBUTES, Server.ENTITY_STATUS);
     }
 
     @Override
@@ -64,8 +63,7 @@ public class PacketListenerViewSelfDisguise extends PacketAdapter {
             }
 
             // Here I grab the packets to convert them to, So I can display them as if the disguise sent them.
-            LibsPackets transformed =
-                    PacketsManager.getPacketsHandler().transformPacket(packet, disguise, observer, observer);
+            LibsPackets transformed = PacketsManager.getPacketsHandler().transformPacket(packet, disguise, observer, observer);
 
             if (transformed.isUnhandled()) {
                 transformed.addPacket(packet);
@@ -75,7 +73,7 @@ public class PacketListenerViewSelfDisguise extends PacketAdapter {
 
             for (PacketContainer newPacket : transformed.getPackets()) {
                 if (newPacket.getType() != Server.PLAYER_INFO && newPacket.getType() != Server.ENTITY_DESTROY &&
-                        newPacket.getIntegers().read(0) == observer.getEntityId()) {
+                    newPacket.getIntegers().read(0) == observer.getEntityId()) {
                     if (newPacket == packet) {
                         newPacket = newPacket.shallowClone();
                     }
@@ -101,8 +99,7 @@ public class PacketListenerViewSelfDisguise extends PacketAdapter {
             }
 
             if (disguise.isPlayerDisguise()) {
-                LibsDisguises.getInstance().getSkinHandler()
-                        .handlePackets(observer, (PlayerDisguise) disguise, selfTransformed);
+                LibsDisguises.getInstance().getSkinHandler().handlePackets(observer, (PlayerDisguise) disguise, selfTransformed);
             }
 
             try {
@@ -117,7 +114,7 @@ public class PacketListenerViewSelfDisguise extends PacketAdapter {
 
             if (event.getPacketType() == Server.ENTITY_METADATA) {
                 if (!LibsPremium.getPluginInformation().isPremium() || LibsPremium.getPaidInformation() != null ||
-                        LibsPremium.getPluginInformation().getBuildNumber().matches("#[0-9]+")) {
+                    LibsPremium.getPluginInformation().getBuildNumber().matches("#[0-9]+")) {
                     event.setPacket(packet = packet.deepClone());
                 }
 
@@ -166,20 +163,16 @@ public class PacketListenerViewSelfDisguise extends PacketAdapter {
                 if (packet.getIntegers().read(1) != 2) {
                     event.setCancelled(true);
                 }
-            } else if (event.getPacketType() == Server.ATTACH_ENTITY ||
-                    event.getPacketType() == Server.REL_ENTITY_MOVE ||
-                    event.getPacketType() == Server.REL_ENTITY_MOVE_LOOK ||
-                    event.getPacketType() == Server.ENTITY_LOOK || event.getPacketType() == Server.ENTITY_TELEPORT ||
-                    event.getPacketType() == Server.ENTITY_HEAD_ROTATION ||
-                    event.getPacketType() == Server.ENTITY_EQUIPMENT) {
+            } else if (event.getPacketType() == Server.ATTACH_ENTITY || event.getPacketType() == Server.REL_ENTITY_MOVE ||
+                event.getPacketType() == Server.REL_ENTITY_MOVE_LOOK || event.getPacketType() == Server.ENTITY_LOOK ||
+                event.getPacketType() == Server.ENTITY_TELEPORT || event.getPacketType() == Server.ENTITY_HEAD_ROTATION ||
+                event.getPacketType() == Server.ENTITY_EQUIPMENT) {
                 event.setCancelled(true);
             } else if (event.getPacketType() == Server.ENTITY_STATUS) {
-                if (disguise.isSelfDisguiseSoundsReplaced() && !disguise.getType().isPlayer() &&
-                        packet.getBytes().read(0) == 2) {
+                if (disguise.isSelfDisguiseSoundsReplaced() && !disguise.getType().isPlayer() && packet.getBytes().read(0) == 2) {
                     event.setCancelled(true);
                 }
-            } else if (event.getPacketType() == Server.ENTITY_VELOCITY &&
-                    !DisguiseUtilities.isPlayerVelocity(observer)) {
+            } else if (event.getPacketType() == Server.ENTITY_VELOCITY && !DisguiseUtilities.isPlayerVelocity(observer)) {
                 // The player only sees velocity changes when there is a velocity event. As the method claims there
                 // was no velocity event...
                 event.setCancelled(true);

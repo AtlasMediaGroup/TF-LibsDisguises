@@ -12,8 +12,7 @@ import java.util.Locale;
  * Created by libraryaddict on 16/02/2020.
  */
 public class ParamInfoItemBlock extends ParamInfoItemStack {
-    public ParamInfoItemBlock(Class paramClass, String name, String valueType, String description,
-            Material[] possibleValues) {
+    public ParamInfoItemBlock(Class paramClass, String name, String valueType, String description, Material[] possibleValues) {
         super(paramClass, name, valueType, description, Arrays.stream(possibleValues).filter(m -> {
             switch (m) {
                 case CHEST:

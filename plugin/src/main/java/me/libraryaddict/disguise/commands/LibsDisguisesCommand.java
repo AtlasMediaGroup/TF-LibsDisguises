@@ -2,7 +2,22 @@ package me.libraryaddict.disguise.commands;
 
 import lombok.Getter;
 import me.libraryaddict.disguise.LibsDisguises;
-import me.libraryaddict.disguise.commands.libsdisguises.*;
+import me.libraryaddict.disguise.commands.libsdisguises.LDChangelog;
+import me.libraryaddict.disguise.commands.libsdisguises.LDCommand;
+import me.libraryaddict.disguise.commands.libsdisguises.LDConfig;
+import me.libraryaddict.disguise.commands.libsdisguises.LDCount;
+import me.libraryaddict.disguise.commands.libsdisguises.LDDebugMineSkin;
+import me.libraryaddict.disguise.commands.libsdisguises.LDDebugPlayer;
+import me.libraryaddict.disguise.commands.libsdisguises.LDHelp;
+import me.libraryaddict.disguise.commands.libsdisguises.LDJson;
+import me.libraryaddict.disguise.commands.libsdisguises.LDMetaInfo;
+import me.libraryaddict.disguise.commands.libsdisguises.LDMods;
+import me.libraryaddict.disguise.commands.libsdisguises.LDPermTest;
+import me.libraryaddict.disguise.commands.libsdisguises.LDReload;
+import me.libraryaddict.disguise.commands.libsdisguises.LDScoreboard;
+import me.libraryaddict.disguise.commands.libsdisguises.LDUpdate;
+import me.libraryaddict.disguise.commands.libsdisguises.LDUpdateProtocolLib;
+import me.libraryaddict.disguise.commands.libsdisguises.LDUploadLogs;
 import me.libraryaddict.disguise.utilities.LibsPremium;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import org.bukkit.ChatColor;
@@ -39,8 +54,9 @@ public class LibsDisguisesCommand implements CommandExecutor, TabCompleter {
     }
 
     protected ArrayList<String> filterTabs(ArrayList<String> list, String[] origArgs) {
-        if (origArgs.length == 0)
+        if (origArgs.length == 0) {
             return list;
+        }
 
         Iterator<String> itel = list.iterator();
         String label = origArgs[origArgs.length - 1].toLowerCase(Locale.ENGLISH);
@@ -48,8 +64,9 @@ public class LibsDisguisesCommand implements CommandExecutor, TabCompleter {
         while (itel.hasNext()) {
             String name = itel.next();
 
-            if (name.toLowerCase(Locale.ENGLISH).startsWith(label))
+            if (name.toLowerCase(Locale.ENGLISH).startsWith(label)) {
                 continue;
+            }
 
             itel.remove();
         }
@@ -63,8 +80,9 @@ public class LibsDisguisesCommand implements CommandExecutor, TabCompleter {
         for (int i = 0; i < args.length - 1; i++) {
             String s = args[i];
 
-            if (s.trim().isEmpty())
+            if (s.trim().isEmpty()) {
                 continue;
+            }
 
             newArgs.add(s);
         }
@@ -90,12 +108,11 @@ public class LibsDisguisesCommand implements CommandExecutor, TabCompleter {
             }
 
             sender.sendMessage(ChatColor.DARK_GREEN + "This server is running Lib's Disguises " + "v" + version +
-                    " by libraryaddict, formerly maintained by Byteflux and NavidK0.");
+                " by libraryaddict, formerly maintained by Byteflux and NavidK0.");
 
             if (sender.hasPermission("libsdisguises.reload")) {
-                sender.sendMessage(ChatColor.DARK_GREEN + "Use " + ChatColor.GREEN + "/libsdisguises " + "reload" +
-                        ChatColor.DARK_GREEN + " to reload the config. All disguises will be blown by doing this" +
-                        ".");
+                sender.sendMessage(ChatColor.DARK_GREEN + "Use " + ChatColor.GREEN + "/libsdisguises " + "reload" + ChatColor.DARK_GREEN +
+                    " to reload the config. All disguises will be blown by doing this" + ".");
                 sender.sendMessage(ChatColor.DARK_GREEN + "Use /libsdisguises help to see more help");
             }
 

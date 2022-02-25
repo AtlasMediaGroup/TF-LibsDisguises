@@ -75,19 +75,23 @@ public class DisguisePerm {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
+        }
 
-        if (obj == null)
+        if (obj == null) {
             return false;
+        }
 
-        if (!(obj instanceof DisguisePerm))
+        if (!(obj instanceof DisguisePerm)) {
             return false;
+        }
 
         DisguisePerm other = (DisguisePerm) obj;
 
-        if (disguiseType != other.disguiseType)
+        if (disguiseType != other.disguiseType) {
             return false;
+        }
 
         return Objects.equals(permName, other.permName);
     }

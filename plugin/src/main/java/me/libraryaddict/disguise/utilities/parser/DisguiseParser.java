@@ -2,7 +2,14 @@ package me.libraryaddict.disguise.utilities.parser;
 
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import me.libraryaddict.disguise.DisguiseConfig;
-import me.libraryaddict.disguise.disguisetypes.*;
+import me.libraryaddict.disguise.disguisetypes.Disguise;
+import me.libraryaddict.disguise.disguisetypes.DisguiseType;
+import me.libraryaddict.disguise.disguisetypes.FlagWatcher;
+import me.libraryaddict.disguise.disguisetypes.MiscDisguise;
+import me.libraryaddict.disguise.disguisetypes.MobDisguise;
+import me.libraryaddict.disguise.disguisetypes.ModdedDisguise;
+import me.libraryaddict.disguise.disguisetypes.PlayerDisguise;
+import me.libraryaddict.disguise.disguisetypes.TargetedDisguise;
 import me.libraryaddict.disguise.disguisetypes.watchers.FallingBlockWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.modded.ModdedEntity;
@@ -30,8 +37,17 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -74,6 +90,10 @@ public class DisguiseParser {
                         continue;
                     } else if (setMethod.getName().equals("setTarget") && setMethod.getParam() != int.class) {
                         continue;
+                    } else if ((setMethod.getName().equals("setCustomName") || setMethod.getName().equals("setCustomNameVisible")) &&
+                        disguise.isPlayerDisguise()) {
+                        // Player Disguise overrides the behavior of custom name, so we definitely don't want it judged on a global scale
+                        continue;
                     } else if (setMethod.getName().equals("setItemInMainHand") && setMethod.getParam() == Material.class) {
                         continue;
                     } else if (setMethod.getName().matches("setArmor") && setMethod.getParam() == ItemStack[].class) {
@@ -108,14 +128,14 @@ public class DisguiseParser {
                     }
 
                     if (getMethod == null) {
-                        DisguiseUtilities.getLogger().severe(String
-                                .format("No such method '%s' when looking for the companion of '%s' in '%s'", getName, setMethod.getName(),
-                                        setMethod.getWatcherClass().getSimpleName()));
+                        DisguiseUtilities.getLogger().severe(
+                            String.format("No such method '%s' when looking for the companion of '%s' in '%s'", getName, setMethod.getName(),
+                                setMethod.getWatcherClass().getSimpleName()));
                         continue;
                     } else if (getMethod.getReturnType() != setMethod.getParam()) {
-                        DisguiseUtilities.getLogger().severe(String
-                                .format("Invalid return type of '%s' when looking for the companion of '%s' in '%s'", getName, setMethod.getName(),
-                                        setMethod.getWatcherClass().getSimpleName()));
+                        DisguiseUtilities.getLogger().severe(
+                            String.format("Invalid return type of '%s' when looking for the companion of '%s' in '%s'", getName, setMethod.getName(),
+                                setMethod.getWatcherClass().getSimpleName()));
                         continue;
                     }
 
@@ -175,7 +195,7 @@ public class DisguiseParser {
                 // Special handling for this method
                 if (m.getName().equals("addPotionEffect")) {
                     MethodHandle getPotion =
-                            MethodHandles.publicLookup().bind(disguise.getWatcher(), "getPotionEffects", MethodType.methodType(PotionEffectType[].class));
+                        MethodHandles.publicLookup().bind(disguise.getWatcher(), "getPotionEffects", MethodType.methodType(PotionEffectType[].class));
                     PotionEffectType[] types = (PotionEffectType[]) getPotion.invoke();
 
                     for (PotionEffectType type : types) {
@@ -267,7 +287,7 @@ public class DisguiseParser {
                         serializedMeta.put(entry.getKey(), val.getClass().getName() + ":" + serialized);
                     } catch (Throwable throwable) {
                         DisguiseUtilities.getLogger()
-                                .warning("Unable to properly serialize the metadata on a disguise, the metadata was saved under name '" + entry.getKey() + "'");
+                            .warning("Unable to properly serialize the metadata on a disguise, the metadata was saved under name '" + entry.getKey() + "'");
 
                         if (!(throwable instanceof StackOverflowError)) {
                             throwable.printStackTrace();
@@ -297,9 +317,8 @@ public class DisguiseParser {
 
             if (!Objects.deepEquals(dObj, object)) {
                 throw new IllegalStateException(String.format(
-                        "%s has conflicting values in class %s! This means it expected the same value again but " + "received a " +
-                                "different value on a different disguise! %s is not the same as %s!", setMethod.toString(), setMethod.toString(), object,
-                        dObj));
+                    "%s has conflicting values in class %s! This means it expected the same value again but " + "received a " +
+                        "different value on a different disguise! %s is not the same as %s!", setMethod.toString(), setMethod.toString(), object, dObj));
             }
 
             return;
@@ -311,66 +330,11 @@ public class DisguiseParser {
     }
 
     private static void doCheck(CommandSender sender, DisguisePermissions permissions, DisguisePerm disguisePerm, Collection<String> usedOptions)
-            throws DisguiseParseException {
+        throws DisguiseParseException {
 
         if (!permissions.isAllowedDisguise(disguisePerm, usedOptions)) {
             throw new DisguiseParseException(LibsMsg.D_PARSE_NOPERM, usedOptions.stream().reduce((first, second) -> second).orElse(null));
         }
-    }
-
-    private static HashMap<String, HashMap<String, Boolean>> getDisguiseOptions(CommandSender sender, String permNode, DisguisePerm type) {
-        HashMap<String, HashMap<String, Boolean>> returns = new HashMap<>();
-
-        // libsdisguises.options.<command>.<disguise>.<method>.<options>
-        for (PermissionAttachmentInfo permission : sender.getEffectivePermissions()) {
-            String lowerPerm = permission.getPermission().toLowerCase(Locale.ENGLISH);
-
-            if (!lowerPerm.startsWith("libsdisguises.options.")) {
-                continue;
-            }
-
-            String[] split = lowerPerm.split("\\.");
-
-            // <command>.<disguise>.<method>.<options>
-            if (split.length < 4) {
-                continue;
-            }
-
-            if (!split[2].equalsIgnoreCase(permNode) && !split[2].equalsIgnoreCase("*")) {
-                continue;
-            }
-
-            boolean applicable = false;
-
-            for (String s : split[3].split("/")) {
-                if (!s.equals("*") && !s.replace("_", "").equalsIgnoreCase(type.toReadable().replace(" ", ""))) {
-                    continue;
-                }
-
-                applicable = true;
-                break;
-            }
-
-            if (!applicable) {
-                continue;
-            }
-
-            HashMap<String, Boolean> options = new HashMap<>();
-
-            for (int i = 5; i < split.length; i++) {
-                options.put(split[i], permission.getValue());
-            }
-
-            for (String s : split[4].split("/")) {
-                if (returns.containsKey(s)) {
-                    returns.get(s).putAll(options);
-                } else {
-                    returns.put(s, options);
-                }
-            }
-        }
-
-        return returns;
     }
 
     public static DisguisePerm getDisguisePerm(String name) {
@@ -416,15 +380,6 @@ public class DisguiseParser {
         return new DisguisePermissions(sender, commandName);
     }
 
-    private static boolean isDouble(String string) {
-        try {
-            Float.parseFloat(string);
-            return true;
-        } catch (Exception ex) {
-            return false;
-        }
-    }
-
     private static boolean isInteger(String string) {
         try {
             Integer.parseInt(string);
@@ -432,32 +387,6 @@ public class DisguiseParser {
         } catch (Exception ex) {
             return false;
         }
-    }
-
-    /**
-     * Returns true if the string is found in the map, or it's not a whitelisted setup
-     * <p>
-     * Returns if command user can access the disguise creation permission type
-     */
-    private static boolean hasPermissionOption(HashMap<String, HashMap<String, Boolean>> disguiseOptions, String method, String value) {
-        method = method.toLowerCase(Locale.ENGLISH);
-
-        // If no permissions were defined, return true
-        if (!disguiseOptions.containsKey(method)) {
-            return true;
-        }
-
-        HashMap<String, Boolean> map = disguiseOptions.get(method);
-
-        value = value.toLowerCase(Locale.ENGLISH);
-
-        // If they were explictly defined, can just return the value
-        if (map.containsKey(value)) {
-            return map.get(value);
-        }
-
-        // If there is at least one whitelisted value, then they needed the whitelist to use it
-        return !map.containsValue(true);
     }
 
     public static String getName(CommandSender entity) {
@@ -496,7 +425,7 @@ public class DisguiseParser {
 
     public static String[] parsePlaceholders(String[] args, CommandSender user, CommandSender target) {
         return parsePlaceholders(args, getName(user), DisguiseUtilities.getDisplayName(user), getSkin(user), getName(target),
-                DisguiseUtilities.getDisplayName(target), DisguiseParser.getSkin(target), getEntityEquipment(user), getEntityEquipment(target));
+            DisguiseUtilities.getDisplayName(target), DisguiseParser.getSkin(target), getEntityEquipment(user), getEntityEquipment(target));
     }
 
     private static EntityEquipment getEntityEquipment(CommandSender entity) {
@@ -647,7 +576,7 @@ public class DisguiseParser {
         }
 
         DisguiseParser.callMethods(Bukkit.getConsoleSender(), disguise, new DisguisePermissions(Bukkit.getConsoleSender(), "disguise"),
-                new DisguisePerm(disguise.getType()), new ArrayList<>(), params, "Disguise");
+            new DisguisePerm(disguise.getType()), new ArrayList<>(), params, "Disguise");
     }
 
     public static void modifyDisguise(Disguise disguise, String[] params) throws Throwable {
@@ -677,7 +606,7 @@ public class DisguiseParser {
      * disguise has been feed a proper disguisetype.
      */
     public static Disguise parseDisguise(CommandSender sender, Entity target, String permNode, String[] args, DisguisePermissions permissions)
-            throws Throwable {
+        throws Throwable {
         if (!Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("DisguiseParser should not be called async!");
         }
@@ -772,7 +701,7 @@ public class DisguiseParser {
                 throw new DisguiseParseException(LibsMsg.NO_PERM_DISGUISE);
             }
 
-            HashMap<String, HashMap<String, Boolean>> disguiseOptions = getDisguiseOptions(sender, permNode, disguisePerm);
+            HashMap<String, HashMap<String, Boolean>> disguiseOptions = DisguisePermissions.getDisguiseOptions(sender, permNode, disguisePerm);
 
             if (disguise == null) {
                 if (disguisePerm.isPlayer()) {
@@ -782,8 +711,9 @@ public class DisguiseParser {
                         throw new DisguiseParseException(LibsMsg.PARSE_SUPPLY_PLAYER);
                     } else {
                         // If they can't use this name, throw error
-                        if (!hasPermissionOption(disguiseOptions, "setname", args[1].toLowerCase(Locale.ENGLISH))) {
-                            if (!args[1].equalsIgnoreCase(sender.getName()) || !hasPermissionOption(disguiseOptions, "setname", "themselves")) {
+                        if (!DisguisePermissions.hasPermissionOption(disguiseOptions, "setname", args[1].toLowerCase(Locale.ENGLISH))) {
+                            if (!args[1].equalsIgnoreCase(sender.getName()) ||
+                                !DisguisePermissions.hasPermissionOption(disguiseOptions, "setname", "themselves")) {
                                 throw new DisguiseParseException(LibsMsg.PARSE_NO_PERM_NAME);
                             }
                         }
@@ -809,7 +739,7 @@ public class DisguiseParser {
                         boolean adult = true;
 
                         if (args[1].equalsIgnoreCase(TranslateType.DISGUISE_OPTIONS.get("baby")) ||
-                                args[1].equalsIgnoreCase(TranslateType.DISGUISE_OPTIONS.get("adult"))) {
+                            args[1].equalsIgnoreCase(TranslateType.DISGUISE_OPTIONS.get("adult"))) {
                             usedOptions.add("setbaby");
                             doCheck(sender, permissions, disguisePerm, usedOptions);
                             adult = args[1].equalsIgnoreCase(TranslateType.DISGUISE_OPTIONS.get("adult"));
@@ -866,7 +796,7 @@ public class DisguiseParser {
                                 doCheck(sender, permissions, disguisePerm, usedOptions);
                                 String itemName = itemStack == null ? "null" : itemStack.getType().name().toLowerCase(Locale.ENGLISH);
 
-                                if (!hasPermissionOption(disguiseOptions, optionName, itemName)) {
+                                if (!DisguisePermissions.hasPermissionOption(disguiseOptions, optionName, itemName)) {
                                     throw new DisguiseParseException(LibsMsg.PARSE_NO_PERM_PARAM, itemName, disguisePerm.toReadable());
                                 }
 
@@ -892,7 +822,7 @@ public class DisguiseParser {
 
                                 doCheck(sender, permissions, disguisePerm, usedOptions);
 
-                                if (!hasPermissionOption(disguiseOptions, optionName, miscId + "")) {
+                                if (!DisguisePermissions.hasPermissionOption(disguiseOptions, optionName, miscId + "")) {
                                     throw new DisguiseParseException(LibsMsg.PARSE_NO_PERM_PARAM, miscId + "", disguisePerm.toReadable());
                                 }
                                 break;
@@ -941,7 +871,7 @@ public class DisguiseParser {
                                    Collection<String> usedOptions, String[] args, String permNode) throws Throwable {
         WatcherMethod[] methods = ParamInfoManager.getDisguiseWatcherMethods(disguise.getWatcher().getClass(), true);
         List<String> list = new ArrayList<>(Arrays.asList(args));
-        HashMap<String, HashMap<String, Boolean>> disguiseOptions = getDisguiseOptions(sender, permNode, disguisePerm);
+        HashMap<String, HashMap<String, Boolean>> disguiseOptions = DisguisePermissions.getDisguiseOptions(sender, permNode, disguisePerm);
 
         for (int argIndex = 0; argIndex < args.length; argIndex++) {
             // This is the method name they provided
@@ -1006,8 +936,8 @@ public class DisguiseParser {
                     parseException = ex;
                 } catch (Exception ignored) {
                     parseException =
-                            new DisguiseParseException(LibsMsg.PARSE_EXPECTED_RECEIVED, paramInfo.getDescriptiveName(), list.isEmpty() ? null : list.get(0),
-                                    TranslateType.DISGUISE_OPTIONS.reverseGet(method.getName()));
+                        new DisguiseParseException(LibsMsg.PARSE_EXPECTED_RECEIVED, paramInfo.getDescriptiveName(), list.isEmpty() ? null : list.get(0),
+                            TranslateType.DISGUISE_OPTIONS.reverseGet(method.getName()));
                 }
             }
 
@@ -1028,14 +958,14 @@ public class DisguiseParser {
             if (!disguiseOptions.isEmpty()) {
                 String stringValue = ParamInfoManager.toString(valueToSet);
 
-                if (!hasPermissionOption(disguiseOptions, methodToUse.getName(), stringValue)) {
+                if (!DisguisePermissions.hasPermissionOption(disguiseOptions, methodToUse.getName(), stringValue)) {
                     throw new DisguiseParseException(LibsMsg.PARSE_NO_PERM_PARAM, stringValue, disguisePerm.toReadable());
                 }
             }
 
             if (DisguiseConfig.isArmorstandsName() && ((methodToUse.getName().equals("setName") && disguise.isPlayerDisguise()) ||
-                    (DisguiseConfig.isOverrideCustomNames() && methodToUse.getName().equals("setCustomName"))) &&
-                    !sender.hasPermission("libsdisguises.multiname")) {
+                (DisguiseConfig.isOverrideCustomNames() && methodToUse.getName().equals("setCustomName"))) &&
+                !sender.hasPermission("libsdisguises.multiname")) {
                 valueToSet = DisguiseUtilities.quoteNewLine((String) valueToSet);
             }
 

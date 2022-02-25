@@ -110,7 +110,7 @@ public class CompileMethods {
                 } else if (method.getParameterCount() > 1 && !method.isAnnotationPresent(NmsAddedIn.class) && !method.isAnnotationPresent(NmsRemovedIn.class)) {
                     continue;
                 } else if (!(method.getName().startsWith("set") && method.getParameterCount() == 1) && !method.getName().startsWith("get") &&
-                        !method.getName().startsWith("has") && !method.getName().startsWith("is")) {
+                    !method.getName().startsWith("has") && !method.getName().startsWith("is")) {
                     continue;
                 } else if (method.getName().equals("removePotionEffect")) {
                     continue;

@@ -9,7 +9,12 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.mojang.datafixers.util.Pair;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
-import me.libraryaddict.disguise.disguisetypes.*;
+import me.libraryaddict.disguise.disguisetypes.Disguise;
+import me.libraryaddict.disguise.disguisetypes.DisguiseType;
+import me.libraryaddict.disguise.disguisetypes.MetaIndex;
+import me.libraryaddict.disguise.disguisetypes.MiscDisguise;
+import me.libraryaddict.disguise.disguisetypes.ModdedDisguise;
+import me.libraryaddict.disguise.disguisetypes.PlayerDisguise;
 import me.libraryaddict.disguise.disguisetypes.watchers.FallingBlockWatcher;
 import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
@@ -49,7 +54,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
     @Override
     public PacketType[] getHandledPackets() {
         return new PacketType[]{PacketType.Play.Server.NAMED_ENTITY_SPAWN, PacketType.Play.Server.SPAWN_ENTITY_LIVING,
-                PacketType.Play.Server.SPAWN_ENTITY_EXPERIENCE_ORB, PacketType.Play.Server.SPAWN_ENTITY, PacketType.Play.Server.SPAWN_ENTITY_PAINTING};
+            PacketType.Play.Server.SPAWN_ENTITY_EXPERIENCE_ORB, PacketType.Play.Server.SPAWN_ENTITY, PacketType.Play.Server.SPAWN_ENTITY_PAINTING};
     }
 
     @Override
@@ -145,8 +150,8 @@ public class PacketHandlerSpawn implements IPacketHandler {
                 // Add player to the list, necessary to spawn them
                 sendTab.getModifier().write(0, ReflectionManager.getEnumPlayerInfoAction(0));
 
-                List playerList = Collections.singletonList(ReflectionManager.getPlayerInfoData(sendTab.getHandle(), ReflectionManager
-                        .getGameProfileWithThisSkin(playerDisguise.getUUID(), playerDisguise.getProfileName(), playerDisguise.getGameProfile())));
+                List playerList = Collections.singletonList(ReflectionManager.getPlayerInfoData(sendTab.getHandle(),
+                    ReflectionManager.getGameProfileWithThisSkin(playerDisguise.getUUID(), playerDisguise.getProfileName(), playerDisguise.getGameProfile())));
                 sendTab.getModifier().write(1, playerList);
 
                 packets.addPacket(sendTab);
@@ -175,8 +180,8 @@ public class PacketHandlerSpawn implements IPacketHandler {
 
             // If self disguise, or further than 50 blocks, or not in front of entity
             normalPlayerDisguise = observer == disguisedEntity || disguisedEntity.getPassengers().contains(observer) || dist > (50 * 50) ||
-                    (observer.getLocation().add(observer.getLocation().getDirection().normalize()).toVector()
-                            .distanceSquared(disguisedEntity.getLocation().toVector()) - dist) < 0.3;
+                (observer.getLocation().add(observer.getLocation().getDirection().normalize()).toVector()
+                    .distanceSquared(disguisedEntity.getLocation().toVector()) - dist) < 0.3;
             sendArmor = normalPlayerDisguise;
 
             skin.setSleepPackets(!normalPlayerDisguise);
@@ -209,8 +214,8 @@ public class PacketHandlerSpawn implements IPacketHandler {
 
             if (NmsVersion.v1_15.isSupported()) {
                 PacketContainer metaPacket =
-                        ProtocolLibrary.getProtocolManager().createPacketConstructor(PacketType.Play.Server.ENTITY_METADATA, entityId, toSend, true)
-                                .createPacket(entityId, toSend, true);
+                    ProtocolLibrary.getProtocolManager().createPacketConstructor(PacketType.Play.Server.ENTITY_METADATA, entityId, toSend, true)
+                        .createPacket(entityId, toSend, true);
 
                 packets.addPacket(metaPacket);
             } else {
@@ -273,12 +278,12 @@ public class PacketHandlerSpawn implements IPacketHandler {
             mods.write(11, yaw);
 
             WrappedDataWatcher newWatcher =
-                    DisguiseUtilities.createSanitizedDataWatcher(observer, WrappedDataWatcher.getEntityWatcher(disguisedEntity), disguise.getWatcher());
+                DisguiseUtilities.createSanitizedDataWatcher(observer, WrappedDataWatcher.getEntityWatcher(disguisedEntity), disguise.getWatcher());
 
             if (NmsVersion.v1_15.isSupported()) {
                 PacketContainer metaPacket = ProtocolLibrary.getProtocolManager()
-                        .createPacketConstructor(PacketType.Play.Server.ENTITY_METADATA, disguisedEntity.getEntityId(), newWatcher, true)
-                        .createPacket(disguisedEntity.getEntityId(), newWatcher, true);
+                    .createPacketConstructor(PacketType.Play.Server.ENTITY_METADATA, disguisedEntity.getEntityId(), newWatcher, true)
+                    .createPacket(disguisedEntity.getEntityId(), newWatcher, true);
 
                 packets.addPacket(metaPacket);
             } else {
@@ -322,7 +327,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
                 }
 
                 Object[] params = new Object[]{disguisedEntity.getEntityId(), disguise.getUUID(), x, y, z, loc.getPitch(), loc.getYaw(), entityType, data,
-                        ReflectionManager.getVec3D(disguisedEntity.getVelocity())};
+                    ReflectionManager.getVec3D(disguisedEntity.getVelocity())};
 
                 spawnEntity = ProtocolLibrary.getProtocolManager().createPacketConstructor(PacketType.Play.Server.SPAWN_ENTITY, params).createPacket(params);
             } else {
@@ -335,7 +340,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
                 Object nmsEntity = ReflectionManager.getNmsEntity(disguisedEntity);
 
                 spawnEntity = ProtocolLibrary.getProtocolManager().createPacketConstructor(PacketType.Play.Server.SPAWN_ENTITY, nmsEntity, objectId, data)
-                        .createPacket(nmsEntity, objectId, data);
+                    .createPacket(nmsEntity, objectId, data);
 
                 StructureModifier<Double> doubles = spawnEntity.getDoubles();
 
@@ -405,7 +410,7 @@ public class PacketHandlerSpawn implements IPacketHandler {
                 ArrayList<WrappedAttribute> attributes = new ArrayList<>();
 
                 WrappedAttribute.Builder builder =
-                        WrappedAttribute.newBuilder().attributeKey(NmsVersion.v1_16.isSupported() ? "generic.max_health" : "generic.maxHealth");
+                    WrappedAttribute.newBuilder().attributeKey(NmsVersion.v1_16.isSupported() ? "generic.max_health" : "generic.maxHealth");
 
                 if (((LivingWatcher) disguise.getWatcher()).isMaxHealthSet()) {
                     builder.baseValue(((LivingWatcher) disguise.getWatcher()).getMaxHealth());

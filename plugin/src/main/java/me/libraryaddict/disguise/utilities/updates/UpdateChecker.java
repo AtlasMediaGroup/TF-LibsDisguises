@@ -47,7 +47,7 @@ public class UpdateChecker {
         }
 
         boolean isRelease = includeDownloaded && getLastDownload() != null ? !getLastDownload().getVersion().contains("-SNAPSHOT") :
-                LibsDisguises.getInstance().isReleaseBuild();
+            LibsDisguises.getInstance().isReleaseBuild();
 
         if (getUpdate().isReleaseBuild() != isRelease) {
             return false;
@@ -230,7 +230,7 @@ public class UpdateChecker {
             lastDownload = result;
 
             updateMessage = new String[]{LibsMsg.UPDATE_SUCCESS.get(),
-                    LibsMsg.UPDATE_INFO.get(result.getVersion(), result.getBuildNumber(), result.getParsedBuildDate().toString(), result.getSize() / 1024)};
+                LibsMsg.UPDATE_INFO.get(result.getVersion(), result.getBuildNumber(), result.getParsedBuildDate().toString(), result.getSize() / 1024)};
 
             return result;
         } catch (Exception ex) {
@@ -251,7 +251,7 @@ public class UpdateChecker {
 
         // If the server has been online for less than 6 hours and both versions are 1.1.1 kind of versions
         if (started + TimeUnit.HOURS.toMillis(6) > System.currentTimeMillis() && currentVersion.matches("[0-9]+(\\.[0-9]+)*") &&
-                newVersion.matches("[0-9]+(\\.[0-9]+)*")) {
+            newVersion.matches("[0-9]+(\\.[0-9]+)*")) {
 
             int cVersion = Integer.parseInt(currentVersion.replace(".", ""));
             int nVersion = Integer.parseInt(newVersion.replace(".", ""));

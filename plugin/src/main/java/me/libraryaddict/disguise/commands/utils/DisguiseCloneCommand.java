@@ -46,7 +46,7 @@ public class DisguiseCloneCommand extends DisguiseBaseCommand implements TabComp
                 doEquipment = false;
             } else if (option.equalsIgnoreCase(LibsMsg.DCLONE_ADDEDANIMATIONS.get())) {
                 doAdded = true;
-            }  else {
+            } else {
                 LibsMsg.INVALID_CLONE.send(sender, option);
                 return true;
             }
@@ -58,8 +58,7 @@ public class DisguiseCloneCommand extends DisguiseBaseCommand implements TabComp
             DisguiseUtilities.createClonedDisguise((Player) sender, player, options);
         } else {
             LibsDisguises.getInstance().getListener()
-                    .addInteraction(sender.getName(), new DisguiseCloneInteraction(options),
-                            DisguiseConfig.getDisguiseCloneExpire());
+                .addInteraction(sender.getName(), new DisguiseCloneInteraction(options), DisguiseConfig.getDisguiseCloneExpire());
 
             LibsMsg.CLICK_TIMER.send(sender, DisguiseConfig.getDisguiseCloneExpire());
         }

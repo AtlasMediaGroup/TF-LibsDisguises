@@ -1,9 +1,20 @@
 package me.libraryaddict.disguise.utilities.json;
 
 import com.comphenix.protocol.wrappers.WrappedParticle;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.InstanceCreator;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.internal.LinkedTreeMap;
-import me.libraryaddict.disguise.disguisetypes.*;
+import me.libraryaddict.disguise.disguisetypes.Disguise;
+import me.libraryaddict.disguise.disguisetypes.DisguiseType;
+import me.libraryaddict.disguise.disguisetypes.EntityPose;
+import me.libraryaddict.disguise.disguisetypes.FlagWatcher;
+import me.libraryaddict.disguise.disguisetypes.MetaIndex;
+import me.libraryaddict.disguise.disguisetypes.VillagerData;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.params.ParamInfoManager;
 import me.libraryaddict.disguise.utilities.params.types.ParamInfoEnum;
@@ -47,7 +58,7 @@ public class SerializerFlagWatcher implements JsonDeserializer<FlagWatcher>, Ins
     }
 
     private void correct(FlagWatcher watcher, Class<? extends FlagWatcher> flagWatcher, String name)
-            throws NoSuchFieldException, IllegalAccessException, DisguiseParseException {
+        throws NoSuchFieldException, IllegalAccessException, DisguiseParseException {
         Field field = FlagWatcher.class.getDeclaredField(name);
         field.setAccessible(true);
         HashMap<Integer, Object> map = (HashMap<Integer, Object>) field.get(watcher);

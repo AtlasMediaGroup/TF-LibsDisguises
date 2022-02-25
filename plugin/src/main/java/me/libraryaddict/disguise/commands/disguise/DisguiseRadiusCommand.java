@@ -179,6 +179,7 @@ public class DisguiseRadiusCommand extends DisguiseBaseCommand implements TabCom
                 if (entity instanceof Player && DisguiseConfig.isNameOfPlayerShownAboveDisguise() && !entity.hasPermission("libsdisguises.hidename")) {
                     if (disguise.getWatcher() instanceof LivingWatcher) {
                         disguise.getWatcher().setCustomName(getDisplayName(entity));
+
                         if (DisguiseConfig.isNameAboveHeadAlwaysVisible()) {
                             disguise.getWatcher().setCustomNameVisible(true);
                         }
@@ -189,7 +190,8 @@ public class DisguiseRadiusCommand extends DisguiseBaseCommand implements TabCom
 
                 if (!setViewDisguise(args)) {
                     // They prefer to have the opposite of whatever the view disguises option is
-                    if (DisguiseAPI.hasSelfDisguisePreference(disguise.getEntity()) && disguise.isSelfDisguiseVisible() == DisguiseConfig.isViewSelfDisguisesDefault()) {
+                    if (DisguiseAPI.hasSelfDisguisePreference(disguise.getEntity()) &&
+                        disguise.isSelfDisguiseVisible() == DisguiseConfig.isViewSelfDisguisesDefault()) {
                         disguise.setViewSelfDisguise(!disguise.isSelfDisguiseVisible());
                     }
                 }

@@ -82,15 +82,15 @@ public class PacketHandlerEquipment implements IPacketHandler {
             }
 
             if ((disguise.getWatcher().isMainHandRaised() && slot == EquipmentSlot.HAND) ||
-                    (disguise.getWatcher() instanceof LivingWatcher && ((LivingWatcher) disguise.getWatcher()).isOffhandRaised() &&
-                            slot == EquipmentSlot.OFF_HAND)) {
+                (disguise.getWatcher() instanceof LivingWatcher && ((LivingWatcher) disguise.getWatcher()).isOffhandRaised() &&
+                    slot == EquipmentSlot.OFF_HAND)) {
                 if (itemStack != null && itemStack.getType() != Material.AIR) {
                     // Convert the datawatcher
                     List<WrappedWatchableObject> list = new ArrayList<>();
 
                     if (DisguiseConfig.isMetaPacketsEnabled()) {
                         WrappedWatchableObject watch = ReflectionManager.createWatchable(MetaIndex.LIVING_META,
-                                WrappedDataWatcher.getEntityWatcher(entity).getByte(MetaIndex.LIVING_META.getIndex()));
+                            WrappedDataWatcher.getEntityWatcher(entity).getByte(MetaIndex.LIVING_META.getIndex()));
 
                         if (watch != null) {
                             list.add(watch);
@@ -155,8 +155,7 @@ public class PacketHandlerEquipment implements IPacketHandler {
         }
 
         if ((disguise.getWatcher().isMainHandRaised() && slot == EquipmentSlot.HAND) ||
-                (disguise.getWatcher() instanceof LivingWatcher && ((LivingWatcher) disguise.getWatcher()).isOffhandRaised() &&
-                        slot == EquipmentSlot.OFF_HAND)) {
+            (disguise.getWatcher() instanceof LivingWatcher && ((LivingWatcher) disguise.getWatcher()).isOffhandRaised() && slot == EquipmentSlot.OFF_HAND)) {
             if (itemStack == null) {
                 itemStack = packets.getPackets().get(0).getItemModifier().read(0);
             }
@@ -168,7 +167,7 @@ public class PacketHandlerEquipment implements IPacketHandler {
 
                 if (DisguiseConfig.isMetaPacketsEnabled()) {
                     WrappedWatchableObject watch =
-                            ReflectionManager.createWatchable(toUse, WrappedDataWatcher.getEntityWatcher(entity).getByte(toUse.getIndex()));
+                        ReflectionManager.createWatchable(toUse, WrappedDataWatcher.getEntityWatcher(entity).getByte(toUse.getIndex()));
 
                     if (watch != null) {
                         list.add(watch);

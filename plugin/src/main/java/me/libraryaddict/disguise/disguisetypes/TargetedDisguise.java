@@ -62,17 +62,14 @@ public abstract class TargetedDisguise extends Disguise {
                         if (player != null) {
                             PacketContainer deleteTab = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 
-                            deleteTab.getPlayerInfoAction().write(0,
-                                    canSee(player) ? PlayerInfoAction.REMOVE_PLAYER : PlayerInfoAction.ADD_PLAYER);
+                            deleteTab.getPlayerInfoAction().write(0, canSee(player) ? PlayerInfoAction.REMOVE_PLAYER : PlayerInfoAction.ADD_PLAYER);
                             deleteTab.getPlayerInfoDataLists().write(0, Arrays.asList(
-                                    new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0,
-                                            NativeGameMode.SURVIVAL, WrappedChatComponent
-                                            .fromText(DisguiseUtilities.getPlayerListName((Player) getEntity())))));
+                                new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0, NativeGameMode.SURVIVAL,
+                                    WrappedChatComponent.fromText(DisguiseUtilities.getPlayerListName((Player) getEntity())))));
 
                             ProtocolLibrary.getProtocolManager().sendServerPacket(player, deleteTab);
                         }
-                    }
-                    catch (InvocationTargetException e) {
+                    } catch (InvocationTargetException e) {
                         e.printStackTrace();
                     }
                 }
@@ -135,17 +132,14 @@ public abstract class TargetedDisguise extends Disguise {
                         if (player != null) {
                             PacketContainer deleteTab = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 
-                            deleteTab.getPlayerInfoAction().write(0,
-                                    canSee(player) ? PlayerInfoAction.ADD_PLAYER : PlayerInfoAction.REMOVE_PLAYER);
+                            deleteTab.getPlayerInfoAction().write(0, canSee(player) ? PlayerInfoAction.ADD_PLAYER : PlayerInfoAction.REMOVE_PLAYER);
                             deleteTab.getPlayerInfoDataLists().write(0, Arrays.asList(
-                                    new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0,
-                                            NativeGameMode.SURVIVAL, WrappedChatComponent
-                                            .fromText(DisguiseUtilities.getPlayerListName((Player) getEntity())))));
+                                new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0, NativeGameMode.SURVIVAL,
+                                    WrappedChatComponent.fromText(DisguiseUtilities.getPlayerListName((Player) getEntity())))));
 
                             ProtocolLibrary.getProtocolManager().sendServerPacket(player, deleteTab);
                         }
-                    }
-                    catch (InvocationTargetException e) {
+                    } catch (InvocationTargetException e) {
                         e.printStackTrace();
                     }
                 }

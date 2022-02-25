@@ -52,8 +52,7 @@ public class PacketListenerClientCustomPayload extends PacketAdapter {
                 }
 
                 if (player.hasMetadata("ld_tabsend") && !player.getMetadata("ld_tabsend").isEmpty()) {
-                    ArrayList<PacketContainer> packets = (ArrayList<PacketContainer>) player.getMetadata("ld_tabsend")
-                            .get(0).value();
+                    ArrayList<PacketContainer> packets = (ArrayList<PacketContainer>) player.getMetadata("ld_tabsend").get(0).value();
 
                     player.removeMetadata("ld_tabsend", LibsDisguises.getInstance());
 
@@ -61,8 +60,7 @@ public class PacketListenerClientCustomPayload extends PacketAdapter {
                         for (PacketContainer packet : packets) {
                             ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
                         }
-                    }
-                    catch (InvocationTargetException e) {
+                    } catch (InvocationTargetException e) {
                         e.printStackTrace();
                     }
                 }

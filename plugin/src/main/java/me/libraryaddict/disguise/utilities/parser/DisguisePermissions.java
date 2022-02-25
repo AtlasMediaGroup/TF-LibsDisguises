@@ -2,6 +2,7 @@ package me.libraryaddict.disguise.utilities.parser;
 
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Ageable;
 import org.bukkit.entity.Animals;
 import org.bukkit.entity.Monster;
@@ -9,7 +10,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permissible;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Vector;
 
 /**
  * Created by libraryaddict on 14/10/2018.
@@ -44,8 +52,7 @@ public class DisguisePermissions {
         private byte inheritance;
         private boolean wildcardCommand;
 
-        public ParsedPermission(DisguisePerm[] disguisePerm, HashMap<String, Boolean> options, byte inheritance,
-                                boolean wildcardCommand) {
+        public ParsedPermission(DisguisePerm[] disguisePerm, HashMap<String, Boolean> options, byte inheritance, boolean wildcardCommand) {
             this.disguisePerm = new Vector<>(Arrays.asList(disguisePerm));
             this.options = options;
             this.inheritance = inheritance;
@@ -169,8 +176,7 @@ public class DisguisePermissions {
             return null;
         }
 
-        return new ParsedPermission(disguisePerms.toArray(new DisguisePerm[0]), options, (byte) inheritance,
-                split[1].equals("*"));
+        return new ParsedPermission(disguisePerms.toArray(new DisguisePerm[0]), options, (byte) inheritance, split[1].equals("*"));
     }
 
     /**
@@ -324,7 +330,7 @@ public class DisguisePermissions {
                     // Or this parsed permission is at a higher level than the last
                     // That prevents 'cow' overriding 'cow.setBurning'
                     if (parsedPermission.options.isEmpty() && !DisguiseConfig.isExplicitDisguisePermissions() &&
-                            (storage.wildcardAllow || lastOptionInheritance != parsedPermission.inheritance)) {
+                        (storage.wildcardAllow || lastOptionInheritance != parsedPermission.inheritance)) {
                         storage.wildcardAllow = true;
 
                         // If this disguise has options defined, unless wildcard was explictly given then remove it
@@ -385,6 +391,8 @@ public class DisguisePermissions {
             if (sender instanceof Player && !sender.isOp() && !DisguiseConfig.isExplicitDisguisePermissions()) {
                 storage.permittedOptions.remove("setYModifier");
                 storage.negatedOptions.add("setYModifier");
+                storage.permittedOptions.remove("setNameYModifier");
+                storage.negatedOptions.add("setNameYModifier");
             }
 
             disguises.add(storage);
@@ -472,16 +480,14 @@ public class DisguisePermissions {
             // have an invisible wildcard allow
             if (!storage.permittedOptions.isEmpty() || storage.negatedOptions.isEmpty()) {
                 // Check if they're trying to use anything they shouldn't
-                if (!disguiseOptions.stream()
-                        .allMatch(option -> storage.permittedOptions.contains(option.toLowerCase(Locale.ENGLISH)))) {
+                if (!disguiseOptions.stream().allMatch(option -> storage.permittedOptions.contains(option.toLowerCase(Locale.ENGLISH)))) {
                     return false;
                 }
             }
         }
 
         // If the user is using a forbidden option, return false. Otherwise true
-        return disguiseOptions.stream()
-                .noneMatch(option -> storage.negatedOptions.contains(option.toLowerCase(Locale.ENGLISH)));
+        return disguiseOptions.stream().noneMatch(option -> storage.negatedOptions.contains(option.toLowerCase(Locale.ENGLISH)));
     }
 
     public boolean isAllowedDisguise(DisguisePerm disguisePerm) {
@@ -489,7 +495,94 @@ public class DisguisePermissions {
     }
 
     private PermissionStorage getStorage(DisguisePerm disguisePerm) {
-        return disguises.stream().filter(disguise -> disguise.getDisguise().equals(disguisePerm)).findAny()
-                .orElse(null);
+        return disguises.stream().filter(disguise -> disguise.getDisguise().equals(disguisePerm)).findAny().orElse(null);
+    }
+
+    public static HashMap<String, HashMap<String, Boolean>> getDisguiseOptions(Permissible permissionsHolder, String permNode, DisguisePerm type) {
+        HashMap<String, HashMap<String, Boolean>> returns = new HashMap<>();
+
+        // libsdisguises.options.<command>.<disguise>.<method>.<options>
+        for (PermissionAttachmentInfo permission : permissionsHolder.getEffectivePermissions()) {
+            String lowerPerm = permission.getPermission().toLowerCase(Locale.ENGLISH);
+
+            if (!lowerPerm.startsWith("libsdisguises.options.")) {
+                continue;
+            }
+
+            String[] split = lowerPerm.split("\\.");
+
+            // <command>.<disguise>.<method>.<options>
+            if (split.length < 4) {
+                continue;
+            }
+
+            if (!split[2].equalsIgnoreCase(permNode) && !split[2].equalsIgnoreCase("*")) {
+                continue;
+            }
+
+            boolean applicable = false;
+
+            for (String s : split[3].split("/")) {
+                if (!s.equals("*") && !s.replace("_", "").equalsIgnoreCase(type.toReadable().replace(" ", ""))) {
+                    continue;
+                }
+
+                applicable = true;
+                break;
+            }
+
+            if (!applicable) {
+                continue;
+            }
+
+            HashMap<String, Boolean> options = new HashMap<>();
+
+            for (int i = 5; i < split.length; i++) {
+                options.put(split[i], permission.getValue());
+            }
+
+            for (String s : split[4].split("/")) {
+                if (returns.containsKey(s)) {
+                    returns.get(s).putAll(options);
+                } else {
+                    returns.put(s, options);
+                }
+            }
+        }
+
+        return returns;
+    }
+
+    /**
+     * Returns true if the string is found in the map, or it's not a whitelisted setup
+     * <p>
+     * Returns if command user can access the disguise creation permission type
+     */
+    public static boolean hasMethodOption(HashMap<String, Boolean> methodValues, String value) {
+        value = value.toLowerCase(Locale.ENGLISH);
+
+        // If they were explictly defined, can just return the value
+        if (methodValues.containsKey(value)) {
+            return methodValues.get(value);
+        }
+
+        // If there is at least one whitelisted value, then they needed the whitelist to use it
+        return !methodValues.containsValue(true);
+    }
+
+    /**
+     * Returns true if the string is found in the map, or it's not a whitelisted setup
+     * <p>
+     * Returns if command user can access the disguise creation permission type
+     */
+    public static boolean hasPermissionOption(HashMap<String, HashMap<String, Boolean>> disguiseOptions, String method, String value) {
+        method = method.toLowerCase(Locale.ENGLISH);
+
+        // If no permissions were defined, return true
+        if (!disguiseOptions.containsKey(method)) {
+            return true;
+        }
+
+        return hasMethodOption(disguiseOptions.get(method), value);
     }
 }

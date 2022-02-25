@@ -47,24 +47,24 @@ public class LDMetaInfo implements LDCommand {
 
             names.sort(String::compareToIgnoreCase);
 
-           // if (NmsVersion.v1_13.isSupported()) {
-                ComponentBuilder builder = new ComponentBuilder("").append(LibsMsg.META_VALUES.getBase());
+            // if (NmsVersion.v1_13.isSupported()) {
+            ComponentBuilder builder = new ComponentBuilder("").append(LibsMsg.META_VALUES.getBase());
 
-                Iterator<String> itel = names.iterator();
+            Iterator<String> itel = names.iterator();
 
-                while (itel.hasNext()) {
-                    String name = itel.next();
+            while (itel.hasNext()) {
+                String name = itel.next();
 
-                    builder.append(TextComponent.fromLegacyText(name));
-                    builder.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/libsdisguises metainfo " + name));
-                    builder.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, LibsMsg.META_CLICK_SHOW.getBase(name)));
+                builder.append(TextComponent.fromLegacyText(name));
+                builder.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/libsdisguises metainfo " + name));
+                builder.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, LibsMsg.META_CLICK_SHOW.getBase(name)));
 
-                    if (itel.hasNext()) {
-                        builder.append(LibsMsg.META_VALUE_SEPERATOR.getBase());
-                    }
+                if (itel.hasNext()) {
+                    builder.append(LibsMsg.META_VALUE_SEPERATOR.getBase());
                 }
+            }
 
-                sender.spigot().sendMessage(builder.create());
+            sender.spigot().sendMessage(builder.create());
             /*} else {
                 LibsMsg.META_VALUES_NO_CLICK.send(sender,
                         StringUtils.join(names, LibsMsg.META_VALUE_SEPERATOR.get()));

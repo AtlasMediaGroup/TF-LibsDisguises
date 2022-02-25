@@ -76,8 +76,7 @@ public class TropicalFishWatcher extends FishWatcher {
     }
 
     private int getData(final DyeColor patternColor, final DyeColor bodyColor, final TropicalFish.Pattern type) {
-        return patternColor.getWoolData() << 24 | bodyColor.getWoolData() << 16 |
-                CraftPattern.values()[type.ordinal()].getDataValue();
+        return patternColor.getWoolData() << 24 | bodyColor.getWoolData() << 16 | CraftPattern.values()[type.ordinal()].getDataValue();
     }
 
     public DyeColor getBodyColor() {

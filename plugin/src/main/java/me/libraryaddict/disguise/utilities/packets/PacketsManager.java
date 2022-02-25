@@ -9,7 +9,15 @@ import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
-import me.libraryaddict.disguise.utilities.packets.packetlisteners.*;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerClientCustomPayload;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerClientInteract;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerEntityDestroy;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerInventory;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerMain;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerScoreboardTeam;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerSounds;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerTabList;
+import me.libraryaddict.disguise.utilities.packets.packetlisteners.PacketListenerViewSelfDisguise;
 import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -85,7 +93,7 @@ public class PacketsManager {
 
                 if (disguise != null) {
                     if (viewDisguisesListenerEnabled && disguise.isSelfDisguiseVisible() &&
-                            (disguise.isHidingArmorFromSelf() || disguise.isHidingHeldItemFromSelf())) {
+                        (disguise.isHidingArmorFromSelf() || disguise.isHidingHeldItemFromSelf())) {
                         player.updateInventory();
                     }
                 }
@@ -170,8 +178,7 @@ public class PacketsManager {
             ProtocolLibrary.getProtocolManager().addPacketListener(mainListener);
             ProtocolLibrary.getProtocolManager().addPacketListener(destroyListener);
 
-            if (NmsVersion.v1_13.isSupported() &&
-                    DisguiseConfig.getPlayerNameType() != DisguiseConfig.PlayerNameType.ARMORSTANDS) {
+            if (NmsVersion.v1_13.isSupported() && DisguiseConfig.getPlayerNameType() != DisguiseConfig.PlayerNameType.ARMORSTANDS) {
                 scoreboardTeamListener = new PacketListenerScoreboardTeam();
 
                 ProtocolLibrary.getProtocolManager().addPacketListener(scoreboardTeamListener);
@@ -200,8 +207,7 @@ public class PacketsManager {
                             DisguiseUtilities.removeSelfDisguise(disguise);
                         }
 
-                        if (inventoryModifierEnabled &&
-                                (disguise.isHidingArmorFromSelf() || disguise.isHidingHeldItemFromSelf())) {
+                        if (inventoryModifierEnabled && (disguise.isHidingArmorFromSelf() || disguise.isHidingHeldItemFromSelf())) {
                             player.updateInventory();
                         }
                     }

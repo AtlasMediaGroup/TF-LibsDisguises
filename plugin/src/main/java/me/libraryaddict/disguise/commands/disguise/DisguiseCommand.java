@@ -1,18 +1,18 @@
 package me.libraryaddict.disguise.commands.disguise;
 
-import me.libraryaddict.disguise.BlockedDisguises;
 import me.libraryaddict.disguise.DisguiseAPI;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.commands.DisguiseBaseCommand;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
 import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
+import me.libraryaddict.disguise.utilities.LibsPremium;
 import me.libraryaddict.disguise.utilities.parser.DisguiseParseException;
 import me.libraryaddict.disguise.utilities.parser.DisguiseParser;
 import me.libraryaddict.disguise.utilities.parser.DisguisePermissions;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -21,6 +21,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class DisguiseCommand extends DisguiseBaseCommand implements TabCompleter {
     @Override
@@ -46,8 +47,8 @@ public class DisguiseCommand extends DisguiseBaseCommand implements TabCompleter
         Disguise disguise;
 
         try {
-            disguise = DisguiseParser
-                    .parseDisguise(sender, (Entity) sender, getPermNode(), DisguiseUtilities.split(StringUtils.join(args, " ")), getPermissions(sender));
+            disguise = DisguiseParser.parseDisguise(sender, (Entity) sender, getPermNode(), DisguiseUtilities.split(StringUtils.join(args, " ")),
+                getPermissions(sender));
         } catch (DisguiseParseException ex) {
             ex.send(sender);
 
@@ -67,28 +68,22 @@ public class DisguiseCommand extends DisguiseBaseCommand implements TabCompleter
             }
         }
 
-        if (!BlockedDisguises.disabled) {
-
-            if (BlockedDisguises.isAllowed(disguise)) {
-                disguise.setEntity((Player) sender);
-            } else {
-                sender.sendMessage(ChatColor.RED + "That disguise is forbidden.");
-                return true;
-            }
-        } else {
-            sender.sendMessage(ChatColor.RED + "Disguises are disabled.");
-            return true;
-        }
+        disguise.setEntity((Player) sender);
 
         if (!setViewDisguise(args)) {
             // They prefer to have the opposite of whatever the view disguises option is
-            if (DisguiseAPI.hasSelfDisguisePreference(disguise.getEntity()) && disguise.isSelfDisguiseVisible() == DisguiseConfig.isViewSelfDisguisesDefault()) {
+            if (DisguiseAPI.hasSelfDisguisePreference(disguise.getEntity()) &&
+                disguise.isSelfDisguiseVisible() == DisguiseConfig.isViewSelfDisguisesDefault()) {
                 disguise.setViewSelfDisguise(!disguise.isSelfDisguiseVisible());
             }
         }
 
         if (!DisguiseAPI.isNotifyBarShown(disguise.getEntity())) {
             disguise.setNotifyBar(DisguiseConfig.NotifyBar.NONE);
+        }
+
+        if (!sender.isOp() && LibsPremium.isBisectHosted() && !Bukkit.getIp().matches("((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\\.(?!$)|$)){4}")) {
+            disguise.setExpires(DisguiseConfig.isDynamicExpiry() ? 20 * 60 * 10 : System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(10));
         }
 
         disguise.startDisguise(sender);

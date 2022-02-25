@@ -1,7 +1,12 @@
 package me.libraryaddict.disguise.utilities.reflection.v1_18;
 
-import com.comphenix.protocol.wrappers.*;
+import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.EnumWrappers.Direction;
+import com.comphenix.protocol.wrappers.Vector3F;
+import com.comphenix.protocol.wrappers.WrappedBlockData;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.mojang.authlib.Agent;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.ProfileLookupCallback;
@@ -17,7 +22,11 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.dedicated.DedicatedServer;
-import net.minecraft.server.level.*;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerChunkCache;
+import net.minecraft.server.level.ServerEntity;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.sounds.SoundEvent;
@@ -34,7 +43,13 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.*;
+import org.bukkit.Art;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.v1_18_R1.CraftArt;
 import org.bukkit.craftbukkit.v1_18_R1.CraftServer;
@@ -60,7 +75,11 @@ import org.bukkit.util.Vector;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ReflectionManager implements ReflectionManagerAbstract {
@@ -216,7 +235,7 @@ public class ReflectionManager implements ReflectionManagerAbstract {
 
     public ClientboundPlayerInfoPacket.PlayerUpdate getPlayerInfoData(WrappedGameProfile gameProfile) {
         return new ClientboundPlayerInfoPacket.PlayerUpdate((GameProfile) gameProfile.getHandle(), 0, GameType.SURVIVAL,
-                new TextComponent(gameProfile.getName()));
+            new TextComponent(gameProfile.getName()));
     }
 
     public Object getNmsEntity(Entity entity) {
@@ -263,8 +282,8 @@ public class ReflectionManager implements ReflectionManagerAbstract {
 
     public void setBoundingBox(Entity entity, double x, double y, double z) {
         Location loc = entity.getLocation();
-        ((CraftEntity) entity).getHandle().setBoundingBox(
-                new AABB(loc.getX() - x / 2, loc.getY() - y / 2, loc.getZ() - z / 2, loc.getX() + x / 2, loc.getY() + y / 2, loc.getZ() + z / 2));
+        ((CraftEntity) entity).getHandle()
+            .setBoundingBox(new AABB(loc.getX() - x / 2, loc.getY() - y / 2, loc.getZ() - z / 2, loc.getX() + x / 2, loc.getY() + y / 2, loc.getZ() + z / 2));
     }
 
     public Enum getSoundCategory(String category) {
@@ -315,7 +334,7 @@ public class ReflectionManager implements ReflectionManagerAbstract {
             return Optional.of(obj);
         }
 
-        return Optional.empty();
+        return Optional.of(val);
     }
 
     public Vector3f convertVec3(Object object) {
@@ -381,12 +400,12 @@ public class ReflectionManager implements ReflectionManagerAbstract {
 
     public net.minecraft.world.entity.EntityType getEntityType(EntityType entityType) {
         return net.minecraft.world.entity.EntityType.byString(
-                entityType.getName() == null ? entityType.name().toLowerCase(Locale.ENGLISH) : entityType.getName()).orElse(null);
+            entityType.getName() == null ? entityType.name().toLowerCase(Locale.ENGLISH) : entityType.getName()).orElse(null);
     }
 
     public Object registerEntityType(NamespacedKey key) {
         net.minecraft.world.entity.EntityType<net.minecraft.world.entity.Entity> newEntity =
-                new net.minecraft.world.entity.EntityType<>(null, null, false, false, false, false, null, null, 0, 0);
+            new net.minecraft.world.entity.EntityType<>(null, null, false, false, false, false, null, null, 0, 0);
         Registry.register(Registry.ENTITY_TYPE, CraftNamespacedKey.toMinecraft(key), newEntity);
         newEntity.getDescriptionId();
         return newEntity; // TODO ??? Some reflection in legacy that I'm unsure about

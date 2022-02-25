@@ -14,7 +14,11 @@ import me.libraryaddict.disguise.disguisetypes.AnimalColor;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
 import me.libraryaddict.disguise.disguisetypes.TargetedDisguise;
-import me.libraryaddict.disguise.disguisetypes.watchers.*;
+import me.libraryaddict.disguise.disguisetypes.watchers.AbstractHorseWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.CatWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.LlamaWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SheepWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.WolfWatcher;
 import me.libraryaddict.disguise.events.DisguiseInteractEvent;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.reflection.NmsVersion;
@@ -126,7 +130,7 @@ public class PacketListenerClientInteract extends PacketAdapter {
                 public void run() {
                     // Fire self interact event
                     DisguiseInteractEvent selfEvent =
-                            new DisguiseInteractEvent((TargetedDisguise) disguise, handUsed, interactType == EnumWrappers.EntityUseAction.ATTACK);
+                        new DisguiseInteractEvent((TargetedDisguise) disguise, handUsed, interactType == EnumWrappers.EntityUseAction.ATTACK);
 
                     Bukkit.getPluginManager().callEvent(selfEvent);
                 }

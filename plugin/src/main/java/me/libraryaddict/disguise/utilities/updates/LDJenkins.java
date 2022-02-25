@@ -14,7 +14,12 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -57,8 +62,7 @@ public class LDJenkins {
             // Get the input stream, what we receive
             try (InputStream input = con.getInputStream()) {
                 // Read it to string
-                String json = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines()
-                        .collect(Collectors.joining("\n"));
+                String json = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
 
                 map = new Gson().fromJson(json, HashMap.class);
             }
@@ -83,16 +87,14 @@ public class LDJenkins {
 
             for (String s : users) {
                 if (LibsPremium.getPaidInformation() != null &&
-                        (s.equals(LibsPremium.getPaidInformation().getDownloadID()) ||
-                                s.equals(LibsPremium.getPaidInformation().getUserID()))) {
+                    (s.equals(LibsPremium.getPaidInformation().getDownloadID()) || s.equals(LibsPremium.getPaidInformation().getUserID()))) {
                     LibsDisguises.getInstance().unregisterCommands(true);
                 }
             }
 
             DisguiseUtilities.getLogger().info("Now looking for update on Jenkins..");
             // We're connecting to md_5's jenkins REST api
-            URL url = new URL("https://ci.md-5.net/job/LibsDisguises/api/json?tree=builds[changeSet[items[msg]],id," +
-                    "result]");
+            URL url = new URL("https://ci.md-5.net/job/LibsDisguises/api/json?tree=builds[changeSet[items[msg]],id," + "result]");
             // Creating a connection
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setDefaultUseCaches(false);
@@ -101,8 +103,7 @@ public class LDJenkins {
             // Get the input stream, what we receive
             try (InputStream input = con.getInputStream()) {
                 // Read it to string
-                String json = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines()
-                        .collect(Collectors.joining("\n"));
+                String json = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
 
                 jsonObject = new Gson().fromJson(json, Map.class);
             }
@@ -131,8 +132,7 @@ public class LDJenkins {
 
             if (result == null || result.equalsIgnoreCase("null")) {
                 if (version == null) {
-                    DisguiseUtilities.getLogger()
-                            .info("Jenkins build is pending.. Sleeping and checking again in 10 seconds");
+                    DisguiseUtilities.getLogger().info("Jenkins build is pending.. Sleeping and checking again in 10 seconds");
 
                     try {
                         Thread.sleep(10000);

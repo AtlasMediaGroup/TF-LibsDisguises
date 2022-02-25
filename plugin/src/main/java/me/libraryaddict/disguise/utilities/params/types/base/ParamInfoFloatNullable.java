@@ -1,11 +1,9 @@
 package me.libraryaddict.disguise.utilities.params.types.base;
 
-import me.libraryaddict.disguise.utilities.params.ParamInfo;
-
 /**
  * Created by libraryaddict on 7/09/2018.
  */
-public class ParamInfoFloatNullable extends ParamInfo {
+public class ParamInfoFloatNullable extends ParamInfoFloat {
     public ParamInfoFloatNullable(String name, String description) {
         super(Float.class, name, description);
     }
@@ -16,7 +14,7 @@ public class ParamInfoFloatNullable extends ParamInfo {
             return null;
         }
 
-        return Float.parseFloat(string);
+        return super.fromString(string);
     }
 
     @Override

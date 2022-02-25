@@ -29,10 +29,10 @@ public class SaveDisguiseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String s, String[] strings) {
         if (sender instanceof Player && !sender.isOp() &&
-                (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
+            (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
             sender.sendMessage(ChatColor.RED +
-                    "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for " +
-                    "non-admin usage!");
+                "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for " +
+                "non-admin usage!");
             return true;
         }
 
@@ -60,7 +60,7 @@ public class SaveDisguiseCommand implements CommandExecutor {
             Disguise disguise = DisguiseAPI.getDisguise((Entity) sender);
 
             if (disguise == null) {
-                LibsMsg.NOT_DISGUISED.send(sender);
+                LibsMsg.NOT_DISGUISED_SAVE_DISGUISE.send(sender);
                 return true;
             }
 

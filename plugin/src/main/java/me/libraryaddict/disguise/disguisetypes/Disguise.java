@@ -36,12 +36,23 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.*;
+import org.bukkit.entity.AbstractHorse;
+import org.bukkit.entity.Boat;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public abstract class Disguise {
@@ -142,6 +153,10 @@ public abstract class Disguise {
     public void setMultiName(String... name) {
         if (name.length == 1 && name[0].isEmpty()) {
             name = new String[0];
+        }
+
+        for (int i = 0; i < name.length; i++) {
+            name[i] = DisguiseUtilities.getHexedColors(name[i]);
         }
 
         name = DisguiseUtilities.reverse(name);
@@ -246,8 +261,8 @@ public abstract class Disguise {
     protected void createDisguise() {
         if (getType().getEntityType() == null) {
             throw new RuntimeException(
-                    "DisguiseType " + getType() + " was used in a futile attempt to construct a disguise, but this Minecraft version does not have " +
-                            "that entity");
+                "DisguiseType " + getType() + " was used in a futile attempt to construct a disguise, but this Minecraft version does not have " +
+                    "that entity");
         }
 
         // Get if they are a adult now..
@@ -359,7 +374,7 @@ public abstract class Disguise {
         removeBossBar();
 
         BossBar bar = Bukkit.createBossBar(getBossBar(), BaseComponent.toLegacyText(LibsMsg.ACTION_BAR_MESSAGE.getBase(getDisguiseName())), getBossBarColor(),
-                getBossBarStyle());
+            getBossBarStyle());
         bar.setProgress(1);
         bar.addPlayer((Player) getEntity());
     }
@@ -376,7 +391,7 @@ public abstract class Disguise {
 
     protected void doActionBar() {
         if (getNotifyBar() == DisguiseConfig.NotifyBar.ACTION_BAR && getEntity() instanceof Player && !getEntity().hasPermission("libsdisguises.noactionbar") &&
-                DisguiseAPI.getDisguise(getEntity()) == Disguise.this) {
+            DisguiseAPI.getDisguise(getEntity()) == Disguise.this) {
             ((Player) getEntity()).spigot().sendMessage(ChatMessageType.ACTION_BAR, LibsMsg.ACTION_BAR_MESSAGE.getBase(getDisguiseName()));
         }
 
@@ -497,8 +512,9 @@ public abstract class Disguise {
     @Deprecated
     public Disguise setWatcher(FlagWatcher newWatcher) {
         if (!getType().getWatcherClass().isInstance(newWatcher)) {
-            throw new IllegalArgumentException((newWatcher == null ? "null" : newWatcher.getClass().getSimpleName()) + " is not a instance of " +
-                    getType().getWatcherClass().getSimpleName() + " for DisguiseType " + getType().name());
+            throw new IllegalArgumentException(
+                (newWatcher == null ? "null" : newWatcher.getClass().getSimpleName()) + " is not a instance of " + getType().getWatcherClass().getSimpleName() +
+                    " for DisguiseType " + getType().name());
         }
 
         watcher = newWatcher;
@@ -694,7 +710,7 @@ public abstract class Disguise {
 
         // Can only continue a disguise that's valid
         if (event.isCancelled() && getEntity() != null && Bukkit.getWorlds().contains(getEntity().getWorld()) &&
-                (!(getEntity() instanceof Player) || ((Player) getEntity()).isOnline())) {
+            (!(getEntity() instanceof Player) || ((Player) getEntity()).isOnline())) {
             return false;
         }
 
@@ -722,7 +738,7 @@ public abstract class Disguise {
                 PacketContainer deleteTab = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
                 deleteTab.getPlayerInfoAction().write(0, PlayerInfoAction.REMOVE_PLAYER);
                 deleteTab.getPlayerInfoDataLists().write(0, Collections.singletonList(
-                        new PlayerInfoData(disguise.getGameProfile(), 0, NativeGameMode.SURVIVAL, WrappedChatComponent.fromText(disguise.getProfileName()))));
+                    new PlayerInfoData(disguise.getGameProfile(), 0, NativeGameMode.SURVIVAL, WrappedChatComponent.fromText(disguise.getProfileName()))));
 
                 try {
                     for (Player player : Bukkit.getOnlinePlayers()) {
@@ -770,8 +786,8 @@ public abstract class Disguise {
         }
 
         if (isHidePlayer() && getEntity() instanceof Player && ((Player) getEntity()).isOnline()) {
-            PlayerInfoData playerInfo = new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0,
-                    NativeGameMode.fromBukkit(((Player) getEntity()).getGameMode()),
+            PlayerInfoData playerInfo =
+                new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0, NativeGameMode.fromBukkit(((Player) getEntity()).getGameMode()),
                     WrappedChatComponent.fromText(DisguiseUtilities.getPlayerListName((Player) getEntity())));
 
             PacketContainer addTab = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
@@ -852,14 +868,15 @@ public abstract class Disguise {
             getWatcher().setBackupValue(flag, backup == null ? null : backup.getDefault());
         }
 
+        // Sometimes someone may set the custom name stuff on the actual player... Normally harmless, until I come along..
         if (getEntity() instanceof Player && !getWatcher().hasCustomName()) {
-            getWatcher().setCustomName("");
-            getWatcher().setCustomNameVisible(false);
+            getWatcher().setInteralCustomName("");
+            getWatcher().setInternalCustomNameVisible(false);
         }
 
         // If a horse is disguised as a horse, it should obey parent no gravity rule
         if ((getEntity() instanceof Boat || getEntity() instanceof AbstractHorse) &&
-                (getWatcher() instanceof BoatWatcher || getWatcher() instanceof AbstractHorseWatcher)) {
+            (getWatcher() instanceof BoatWatcher || getWatcher() instanceof AbstractHorseWatcher)) {
             getWatcher().setNoGravity(!getEntity().hasGravity());
         } else {
             getWatcher().setNoGravity(true);
@@ -1003,7 +1020,7 @@ public abstract class Disguise {
             PacketContainer removeTab = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
             removeTab.getPlayerInfoAction().write(0, PlayerInfoAction.REMOVE_PLAYER);
             removeTab.getPlayerInfoDataLists().write(0, Collections.singletonList(
-                    new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0, NativeGameMode.SURVIVAL, WrappedChatComponent.fromText(""))));
+                new PlayerInfoData(ReflectionManager.getGameProfile((Player) getEntity()), 0, NativeGameMode.SURVIVAL, WrappedChatComponent.fromText(""))));
 
             try {
                 for (Player player : Bukkit.getOnlinePlayers()) {

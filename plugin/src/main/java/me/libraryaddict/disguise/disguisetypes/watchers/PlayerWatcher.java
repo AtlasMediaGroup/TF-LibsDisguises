@@ -4,6 +4,7 @@ import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
 import com.comphenix.protocol.wrappers.nbt.NbtFactory;
 import me.libraryaddict.disguise.DisguiseConfig;
+import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
 import me.libraryaddict.disguise.disguisetypes.MetaIndex;
 import me.libraryaddict.disguise.disguisetypes.PlayerDisguise;
@@ -26,8 +27,9 @@ public class PlayerWatcher extends LivingWatcher {
     }
 
     public void setDisplayedInTab(boolean showPlayerInTab) {
-        if (getDisguise().isDisguiseInUse())
+        if (getDisguise().isDisguiseInUse()) {
             throw new IllegalStateException("Cannot set this while disguise is in use!");
+        }
 
         alwaysShowInTab = showPlayerInTab;
     }

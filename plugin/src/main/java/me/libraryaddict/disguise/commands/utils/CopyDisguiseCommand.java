@@ -31,10 +31,10 @@ public class CopyDisguiseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String s, String[] args) {
         if (sender instanceof Player && !sender.isOp() &&
-                (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
+            (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
             sender.sendMessage(ChatColor.RED +
-                    "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for " +
-                    "non-admin usage!");
+                "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for " +
+                "non-admin usage!");
             return true;
         }
 
@@ -67,7 +67,7 @@ public class CopyDisguiseCommand implements CommandExecutor {
 
         if (disguise == null) {
             LibsDisguises.getInstance().getListener()
-                    .addInteraction(sender.getName(), new CopyDisguiseInteraction(this), DisguiseConfig.getDisguiseEntityExpire());
+                .addInteraction(sender.getName(), new CopyDisguiseInteraction(this), DisguiseConfig.getDisguiseEntityExpire());
 
             LibsMsg.DISGUISECOPY_INTERACT.send(sender, DisguiseConfig.getDisguiseEntityExpire());
             return true;
@@ -137,7 +137,7 @@ public class CopyDisguiseCommand implements CommandExecutor {
                 builder.append(LibsMsg.CLICK_COPY.getBase(sections));
                 builder.event(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, current.toString()));
                 builder.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        new ComponentBuilder("").append(LibsMsg.CLICK_TO_COPY_HOVER.getBase()).append(" " + sections).create()));
+                    new ComponentBuilder("").append(LibsMsg.CLICK_TO_COPY_HOVER.getBase()).append(" " + sections).create()));
 
                 current = new StringBuilder();
             }

@@ -31,8 +31,7 @@ public class ModdedDisguise extends TargetedDisguise {
         super(disguiseType);
 
         if (disguiseType != DisguiseType.UNKNOWN) {
-            throw new InvalidParameterException(
-                    "CustomDisguise is only for DisguiseType.MODDED_LIVING/MISC and DisguiseType.UNKNOWN");
+            throw new InvalidParameterException("CustomDisguise is only for DisguiseType.MODDED_LIVING/MISC and DisguiseType.UNKNOWN");
         }
 
         createDisguise();

@@ -32,7 +32,7 @@ public class PacketHandlerMovement implements IPacketHandler {
     @Override
     public PacketType[] getHandledPackets() {
         return new PacketType[]{PacketType.Play.Server.REL_ENTITY_MOVE_LOOK, PacketType.Play.Server.ENTITY_LOOK, PacketType.Play.Server.ENTITY_TELEPORT,
-                PacketType.Play.Server.REL_ENTITY_MOVE};
+            PacketType.Play.Server.REL_ENTITY_MOVE};
     }
 
     private short conRel(double oldCord, double newCord) {
@@ -50,7 +50,7 @@ public class PacketHandlerMovement implements IPacketHandler {
         }
 
         ArrayList<PacketContainer> toAdd = new ArrayList<>();
-        double height = disguise.getHeight();
+        double height = disguise.getHeight() + disguise.getWatcher().getNameYModifier();
 
         for (PacketContainer packet : packets.getPackets()) {
             if (packet.getType() == PacketType.Play.Server.ENTITY_LOOK) {
@@ -158,7 +158,7 @@ public class PacketHandlerMovement implements IPacketHandler {
             packets.addPacket(movePacket);
             return;
         } else if (disguise.getType() == DisguiseType.RABBIT &&
-                (sentPacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE || sentPacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK)) {
+            (sentPacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE || sentPacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK)) {
             // When did the rabbit disguise last hop
             long lastHop = 999999;
 

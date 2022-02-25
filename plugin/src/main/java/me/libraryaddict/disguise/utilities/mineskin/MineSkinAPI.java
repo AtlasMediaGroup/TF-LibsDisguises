@@ -8,7 +8,14 @@ import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.SkinUtils;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
@@ -158,8 +165,8 @@ public class MineSkinAPI {
             printDebug("Received status code: " + connection.getResponseCode());
 
             if (connection.getResponseCode() == 500) {
-                String errorMessage = new BufferedReader(new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8)).lines()
-                        .collect(Collectors.joining("\n"));
+                String errorMessage =
+                    new BufferedReader(new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
 
                 APIError error = new Gson().fromJson(errorMessage, APIError.class);
 
@@ -214,7 +221,7 @@ public class MineSkinAPI {
         } catch (Exception ex) {
             try {
                 if (connection != null && (connection.getResponseCode() == 524 || connection.getResponseCode() == 408 || connection.getResponseCode() == 504 ||
-                        connection.getResponseCode() == 599)) {
+                    connection.getResponseCode() == 599)) {
                     if (getApiKey() != null && connection.getResponseCode() == 504) {
                         callback.onError(LibsMsg.SKIN_API_TIMEOUT_API_KEY_ERROR);
                     } else {

@@ -28,8 +28,7 @@ public class MiscDisguise extends TargetedDisguise {
         super(disguiseType);
 
         if (disguiseType != DisguiseType.FALLING_BLOCK && disguiseType != DisguiseType.DROPPED_ITEM) {
-            throw new IllegalArgumentException(
-                    "This constructor requires a DROPPED_ITEM or FALLING_BLOCK disguise type!");
+            throw new IllegalArgumentException("This constructor requires a DROPPED_ITEM or FALLING_BLOCK disguise type!");
         }
 
         apply(0, itemStack);
@@ -39,8 +38,7 @@ public class MiscDisguise extends TargetedDisguise {
         super(disguiseType);
 
         if (disguiseType != DisguiseType.FALLING_BLOCK && disguiseType != DisguiseType.DROPPED_ITEM) {
-            throw new IllegalArgumentException(
-                    "This constructor requires a DROPPED_ITEM or FALLING_BLOCK disguise type!");
+            throw new IllegalArgumentException("This constructor requires a DROPPED_ITEM or FALLING_BLOCK disguise type!");
         }
 
         apply(0, new ItemStack(material));
@@ -56,9 +54,8 @@ public class MiscDisguise extends TargetedDisguise {
 
         if (!disguiseType.isMisc()) {
             throw new InvalidParameterException(
-                    "Expected a non-living DisguiseType while constructing MiscDisguise. Received " + disguiseType +
-                            " instead. Please use " + (disguiseType.isPlayer() ? "PlayerDisguise" : "MobDisguise") +
-                            " instead");
+                "Expected a non-living DisguiseType while constructing MiscDisguise. Received " + disguiseType + " instead. Please use " +
+                    (disguiseType.isPlayer() ? "PlayerDisguise" : "MobDisguise") + " instead");
         }
 
         apply(id, new ItemStack(Material.STONE));

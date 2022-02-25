@@ -27,8 +27,10 @@ public class GrabHeadCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String s, String[] strings) {
         if (sender instanceof Player && !sender.isOp() &&
-                (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
-            sender.sendMessage(ChatColor.RED + "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for non-admin usage!");
+            (!LibsPremium.isPremium() || LibsPremium.getPaidInformation() == LibsPremium.getPluginInformation())) {
+            sender.sendMessage(ChatColor.RED +
+                "This is the free version of Lib's Disguises, player commands are limited to console and Operators only! Purchase the plugin for non-admin " +
+                "usage!");
             return true;
         }
 
@@ -94,8 +96,7 @@ public class GrabHeadCommand implements CommandExecutor {
                             Field field = meta.getClass().getDeclaredField("profile");
                             field.setAccessible(true);
                             field.set(meta, profile.getHandle());
-                        }
-                        catch (NoSuchFieldException | IllegalAccessException e) {
+                        } catch (NoSuchFieldException | IllegalAccessException e) {
                             e.printStackTrace();
                         }
 

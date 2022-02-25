@@ -13,8 +13,7 @@ import java.util.Set;
  * Created by libraryaddict on 7/09/2018.
  */
 public class ParamInfoItemStackArray extends ParamInfoItemStack {
-    public ParamInfoItemStackArray(Class paramClass, String name, String valueType, String description,
-            Enum[] possibleValues) {
+    public ParamInfoItemStackArray(Class paramClass, String name, String valueType, String description, Enum[] possibleValues) {
         super(paramClass, name, valueType, description, possibleValues);
 
         setOtherValues("%armor%");
@@ -38,8 +37,9 @@ public class ParamInfoItemStackArray extends ParamInfoItemStack {
         String lastEntry = split.remove(split.size() - 1);
 
         for (String material : super.getEnums(null)) {
-            if (!split.isEmpty() && !material.toLowerCase(Locale.ENGLISH).startsWith(lastEntry.toLowerCase(Locale.ENGLISH)))
+            if (!split.isEmpty() && !material.toLowerCase(Locale.ENGLISH).startsWith(lastEntry.toLowerCase(Locale.ENGLISH))) {
                 continue;
+            }
 
             toReturn.add(StringUtils.join(split, ",") + (split.isEmpty() ? "" : ",") + material);
         }
@@ -80,8 +80,7 @@ public class ParamInfoItemStackArray extends ParamInfoItemStack {
         if (string.startsWith("[") && string.endsWith("]")) {
             try {
                 return DisguiseUtilities.getGson().fromJson(string, ItemStack[].class);
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
             }
         }
 

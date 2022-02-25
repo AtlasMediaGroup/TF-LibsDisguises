@@ -1,6 +1,10 @@
 package me.libraryaddict.disguise.disguisetypes;
 
-import me.libraryaddict.disguise.disguisetypes.watchers.*;
+import me.libraryaddict.disguise.disguisetypes.watchers.AgeableWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ArmorStandWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SlimeWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ZombieWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseValues;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -19,9 +23,8 @@ public class MobDisguise extends TargetedDisguise {
 
         if (!disguiseType.isMob()) {
             throw new InvalidParameterException(
-                    "Expected a living DisguiseType while constructing MobDisguise. Received " + disguiseType +
-                            " instead. Please use " + (disguiseType.isPlayer() ? "PlayerDisguise" : "MiscDisguise") +
-                            " instead");
+                "Expected a living DisguiseType while constructing MobDisguise. Received " + disguiseType + " instead. Please use " +
+                    (disguiseType.isPlayer() ? "PlayerDisguise" : "MiscDisguise") + " instead");
         }
 
         this.isAdult = isAdult;
@@ -43,8 +46,7 @@ public class MobDisguise extends TargetedDisguise {
 
         if (getWatcher() != null) {
             if (getType() == DisguiseType.ARMOR_STAND) {
-                return (((ArmorStandWatcher) getWatcher()).isSmall() ? values.getBabyBox() : values.getAdultBox())
-                        .getY();
+                return (((ArmorStandWatcher) getWatcher()).isSmall() ? values.getBabyBox() : values.getAdultBox()).getY();
             } else if (getType() == DisguiseType.SLIME || getType() == DisguiseType.MAGMA_CUBE) {
                 return 0.51 * (0.255 * ((SlimeWatcher) getWatcher()).getSize());
             }
@@ -73,8 +75,7 @@ public class MobDisguise extends TargetedDisguise {
     }
 
     public boolean doesDisguiseAge() {
-        return getWatcher() != null &&
-                (getWatcher() instanceof AgeableWatcher || getWatcher() instanceof ZombieWatcher);
+        return getWatcher() != null && (getWatcher() instanceof AgeableWatcher || getWatcher() instanceof ZombieWatcher);
     }
 
     @Override

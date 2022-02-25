@@ -73,7 +73,8 @@ public class PacketHandlerAttributes implements IPacketHandler {
                 builder.packet(updateAttributes);
 
                 attributes.add(builder.build());
-            } else if (attribute.getAttributeKey().equals(NmsVersion.v1_16.isSupported() ? "generic.movement_speed" : "generic.movementSpeed") && disguise.getWatcher() instanceof AbstractHorseWatcher) {
+            } else if (attribute.getAttributeKey().equals(NmsVersion.v1_16.isSupported() ? "generic.movement_speed" : "generic.movementSpeed") &&
+                disguise.getWatcher() instanceof AbstractHorseWatcher) {
                 WrappedAttribute.Builder builder = WrappedAttribute.newBuilder(attribute);
                 builder.packet(updateAttributes);
 

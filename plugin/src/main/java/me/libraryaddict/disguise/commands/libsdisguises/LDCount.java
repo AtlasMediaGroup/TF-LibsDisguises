@@ -8,7 +8,11 @@ import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import me.libraryaddict.disguise.utilities.translations.TranslateType;
 import org.bukkit.command.CommandSender;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Created by libraryaddict on 20/04/2020.
@@ -37,18 +41,16 @@ public class LDCount implements LDCommand {
         if (counts.isEmpty()) {
             LibsMsg.NO_DISGUISES_IN_USE.send(sender);
         } else {
-            LibsMsg.ACTIVE_DISGUISES_COUNT.send(sender,
-                    counts.values().stream().reduce(Integer::sum).get());
+            LibsMsg.ACTIVE_DISGUISES_COUNT.send(sender, counts.values().stream().reduce(Integer::sum).get());
 
             ArrayList<DisguiseType> types = new ArrayList<>(counts.keySet());
-            types.sort((d1, d2) -> String.CASE_INSENSITIVE_ORDER.compare(TranslateType.DISGUISES.get(d1.toReadable()),
-                    TranslateType.DISGUISES.get(d2.toReadable())));
+            types.sort(
+                (d1, d2) -> String.CASE_INSENSITIVE_ORDER.compare(TranslateType.DISGUISES.get(d1.toReadable()), TranslateType.DISGUISES.get(d2.toReadable())));
 
             StringBuilder builder = new StringBuilder();
 
             for (int i = 0; i < types.size(); i++) {
-                builder.append(LibsMsg.ACTIVE_DISGUISES_DISGUISE
-                        .get(TranslateType.DISGUISES.get(types.get(i).toReadable()), counts.get(types.get(i))));
+                builder.append(LibsMsg.ACTIVE_DISGUISES_DISGUISE.get(TranslateType.DISGUISES.get(types.get(i).toReadable()), counts.get(types.get(i))));
 
                 if (i + 1 < types.size()) {
                     builder.append(LibsMsg.ACTIVE_DISGUISES_SEPERATOR.get());

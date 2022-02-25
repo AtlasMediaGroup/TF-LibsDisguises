@@ -12,7 +12,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by libraryaddict on 10/06/2017.
@@ -116,9 +123,9 @@ public enum TranslateType {
         if (LibsPremium.isPremium() && DisguiseConfig.isUseTranslations()) {
             DisguiseUtilities.getLogger().info("Loaded " + translated.size() + " translations for " + name() + " with " + diff + " changed");
         } else if (diff > 0 && !DisguiseConfig.isUseTranslations()) {
-            DisguiseUtilities.getLogger()
-                    .info("Translations are disabled in libsdisguises.yml, but you modified " + diff + " messages in the translations for " + name() +
-                            ". Is this intended?");
+            DisguiseUtilities.getLogger().info(
+                "Translations are disabled in libsdisguises.yml, but you modified " + diff + " messages in the translations for " + name() +
+                    ". Is this intended?");
         }
     }
 
@@ -180,7 +187,7 @@ public enum TranslateType {
                     }
 
                     writer.write("# To translate, follow this example 'Original Message': 'My New Message'\n# The Original" +
-                            " Message is used as a yaml config key to get your new message!");
+                        " Message is used as a yaml config key to get your new message!");
                     writer.write("\n# To use hex color codes, use <#hexcolor> where hexcolor is the 6 char code");
                 }
             }
@@ -244,7 +251,7 @@ public enum TranslateType {
 
             if (dupes + outdated > 0) {
                 DisguiseUtilities.getLogger().info("Removed " + dupes + " duplicate and " + outdated + " outdated translations from " + getFile().getName() +
-                        ", this was likely caused by a previous issue in the plugin");
+                    ", this was likely caused by a previous issue in the plugin");
 
                 Files.write(getFile().toPath(), StringUtils.join(disguiseText, "\n").getBytes());
             }

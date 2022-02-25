@@ -44,8 +44,7 @@ public class LDChangelog implements LDCommand {
 
         if (!checker.getUpdate().isReleaseBuild()) {
             sender.sendMessage(
-                    ChatColor.GOLD + "You are on build " + (LibsDisguises.getInstance().isNumberedBuild() ? "#" : "") +
-                            LibsDisguises.getInstance().getBuildNo());
+                ChatColor.GOLD + "You are on build " + (LibsDisguises.getInstance().isNumberedBuild() ? "#" : "") + LibsDisguises.getInstance().getBuildNo());
         }
 
         for (String msg : checker.getUpdate().getChangelog()) {

@@ -6,7 +6,17 @@ import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
 import me.libraryaddict.disguise.utilities.LibsPremium;
-import me.libraryaddict.disguise.utilities.packets.packethandlers.*;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerAnimation;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerAttachEntity;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerAttributes;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerCollect;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerEntityStatus;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerEquipment;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerHeadRotation;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerMetadata;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerMovement;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerSpawn;
+import me.libraryaddict.disguise.utilities.packets.packethandlers.PacketHandlerVelocity;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
@@ -36,8 +46,7 @@ public class PacketsHandler {
         packetHandlers.add(new PacketHandlerHeadRotation());
 
         // If not prem, if build is from jenkins, else its a custom and needs paid info
-        if (!LibsPremium.isPremium() || LibsDisguises.getInstance().getBuildNo().matches("[0-9]+") ||
-                LibsPremium.getPaidInformation() != null) {
+        if (!LibsPremium.isPremium() || LibsDisguises.getInstance().getBuildNo().matches("[0-9]+") || LibsPremium.getPaidInformation() != null) {
             packetHandlers.add(new PacketHandlerMetadata(this));
         }
 

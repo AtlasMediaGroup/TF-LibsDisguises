@@ -58,7 +58,7 @@ public class PlayerSkinHandler implements Listener {
 
         public boolean canRemove(boolean onMoved) {
             return firstPacketSent + (DisguiseConfig.getTablistRemoveDelay() * 50) + (onMoved ? 0 : DisguiseConfig.getPlayerDisguisesSkinExpiresMove() * 50) <
-                    System.currentTimeMillis();
+                System.currentTimeMillis();
         }
 
         @Override
@@ -76,20 +76,20 @@ public class PlayerSkinHandler implements Listener {
 
     @Getter
     private final Cache<Player, List<PlayerSkin>> cache =
-            CacheBuilder.newBuilder().weakKeys().expireAfterWrite(DisguiseConfig.getPlayerDisguisesSkinExpiresMove() * 50, TimeUnit.MILLISECONDS)
-                    .removalListener((event) -> {
-                        if (event.getCause() != RemovalCause.EXPIRED) {
-                            return;
-                        }
+        CacheBuilder.newBuilder().weakKeys().expireAfterWrite(DisguiseConfig.getPlayerDisguisesSkinExpiresMove() * 50, TimeUnit.MILLISECONDS)
+            .removalListener((event) -> {
+                if (event.getCause() != RemovalCause.EXPIRED) {
+                    return;
+                }
 
-                        List<PlayerSkin> skins = (List<PlayerSkin>) event.getValue();
+                List<PlayerSkin> skins = (List<PlayerSkin>) event.getValue();
 
-                        for (PlayerSkin skin : skins) {
-                            doPacketRemoval((Player) event.getKey(), skin);
-                        }
+                for (PlayerSkin skin : skins) {
+                    doPacketRemoval((Player) event.getKey(), skin);
+                }
 
-                        skins.clear();
-                    }).build();
+                skins.clear();
+            }).build();
 
     public PlayerSkinHandler() {
         new BukkitRunnable() {
@@ -262,8 +262,8 @@ public class PlayerSkinHandler implements Listener {
         WrappedDataWatcher watcher = DisguiseUtilities.createSanitizedDataWatcher(player, WrappedDataWatcher.getEntityWatcher(entity), disguise.getWatcher());
 
         PacketContainer metaPacket =
-                ProtocolLibrary.getProtocolManager().createPacketConstructor(PacketType.Play.Server.ENTITY_METADATA, entity.getEntityId(), watcher, true)
-                        .createPacket(entity.getEntityId(), watcher, true);
+            ProtocolLibrary.getProtocolManager().createPacketConstructor(PacketType.Play.Server.ENTITY_METADATA, entity.getEntityId(), watcher, true)
+                .createPacket(entity.getEntityId(), watcher, true);
 
         ProtocolLibrary.getProtocolManager().sendServerPacket(player, metaPacket, false);
     }

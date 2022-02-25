@@ -34,7 +34,13 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 public class FlagWatcher {
     private boolean addEntityAnimations = DisguiseConfig.isAddEntityAnimations();
@@ -65,6 +71,8 @@ public class FlagWatcher {
     private Float yawLock;
     @Getter
     private float yModifier;
+    @Getter
+    private float nameYModifier;
 
     public FlagWatcher(Disguise disguise) {
         this.disguise = (TargetedDisguise) disguise;
@@ -83,12 +91,29 @@ public class FlagWatcher {
         setPitchLock(pitchLocked ? 0F : null);
     }
 
+    public void setNameYModifier(float yModifier) {
+        this.nameYModifier = yModifier;
+
+        if (!DisguiseConfig.isMovementPacketsEnabled() || !getDisguise().isDisguiseInUse()) {
+            return;
+        }
+
+        PacketContainer packet = ProtocolLibrary.getProtocolManager().createPacketConstructor(Server.ENTITY_TELEPORT, getDisguise().getEntity())
+            .createPacket(getDisguise().getEntity());
+
+        try {
+            for (Player player : DisguiseUtilities.getPerverts(getDisguise())) {
+                ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
+            }
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void setYModifier(float yModifier) {
         if (!DisguiseConfig.isMovementPacketsEnabled()) {
             return;
         }
-
-        double diff = yModifier - getYModifier();
 
         this.yModifier = yModifier;
 
@@ -97,7 +122,7 @@ public class FlagWatcher {
         }
 
         PacketContainer packet = ProtocolLibrary.getProtocolManager().createPacketConstructor(Server.ENTITY_TELEPORT, getDisguise().getEntity())
-                .createPacket(getDisguise().getEntity());
+            .createPacket(getDisguise().getEntity());
 
         try {
             for (Player player : DisguiseUtilities.getPerverts(getDisguise())) {
@@ -202,6 +227,7 @@ public class FlagWatcher {
         cloned.pitchLock = pitchLock;
         cloned.yawLock = yawLock;
         cloned.yModifier = yModifier;
+        cloned.nameYModifier = nameYModifier;
 
         return cloned;
     }
@@ -343,7 +369,7 @@ public class FlagWatcher {
                 float health = ((Number) watch.getRawValue()).floatValue();
 
                 String name = DisguiseConfig.isScoreboardNames() && ((PlayerDisguise) getDisguise()).hasScoreboardName() ?
-                        ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
+                    ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
 
                 ReflectionManager.setScore(player.getScoreboard(), name, (int) Math.ceil(health));
             }
@@ -383,7 +409,7 @@ public class FlagWatcher {
                 }
 
                 String name = DisguiseConfig.isScoreboardNames() && ((PlayerDisguise) getDisguise()).hasScoreboardName() ?
-                        ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
+                    ((PlayerDisguise) getDisguise()).getScoreboardName().getPlayer() : ((PlayerDisguise) getDisguise()).getName();
 
                 ReflectionManager.setScore(player.getScoreboard(), name, (int) Math.ceil(health));
             }
@@ -507,7 +533,11 @@ public class FlagWatcher {
     }
 
     public String getCustomName() {
-        if (!getDisguise().isPlayerDisguise() && DisguiseConfig.isOverrideCustomNames() && DisguiseConfig.isArmorstandsName()) {
+        if (getDisguise().isPlayerDisguise()) {
+            return ((PlayerDisguise) getDisguise()).getName();
+        }
+
+        if (DisguiseConfig.isOverrideCustomNames() && DisguiseConfig.isArmorstandsName()) {
             if (getDisguise().getMultiNameLength() == 0) {
                 return null;
             }
@@ -539,13 +569,20 @@ public class FlagWatcher {
             name = name.substring(1);
         }
 
+        if (getDisguise().isPlayerDisguise()) {
+            ((PlayerDisguise) getDisguise()).setName(name);
+            return;
+        }
+
+        name = DisguiseUtilities.getHexedColors(name);
+
         String customName = getCustomName();
 
         if (Objects.equals(customName, name)) {
             return;
         }
 
-        if (!getDisguise().isPlayerDisguise() && DisguiseConfig.isArmorstandsName() && DisguiseConfig.isOverrideCustomNames()) {
+        if (DisguiseConfig.isArmorstandsName() && DisguiseConfig.isOverrideCustomNames()) {
             MetaIndex custom = NmsVersion.v1_13.isSupported() ? MetaIndex.ENTITY_CUSTOM_NAME : MetaIndex.ENTITY_CUSTOM_NAME_OLD;
 
             if (!hasValue(custom)) {
@@ -580,7 +617,7 @@ public class FlagWatcher {
 
             if (NmsVersion.v1_13.isSupported()) {
                 Optional<WrappedChatComponent> optional =
-                        Optional.of(WrappedChatComponent.fromJson(DisguiseUtilities.serialize(DisguiseUtilities.getAdventureChat(name))));
+                    Optional.of(WrappedChatComponent.fromJson(DisguiseUtilities.serialize(DisguiseUtilities.getAdventureChat(name))));
 
                 setData(MetaIndex.ENTITY_CUSTOM_NAME, optional);
             } else {
@@ -690,10 +727,19 @@ public class FlagWatcher {
     }
 
     public void setCustomNameVisible(boolean display) {
+        if (getDisguise().isPlayerDisguise()) {
+            ((PlayerDisguise) getDisguise()).setNameVisible(display);
+            return;
+        }
+
         if (DisguiseConfig.isArmorstandsName() && DisguiseConfig.isOverrideCustomNames()) {
             display = false;
         }
 
+        setInternalCustomNameVisible(display);
+    }
+
+    protected void setInternalCustomNameVisible(boolean display) {
         setData(MetaIndex.ENTITY_CUSTOM_NAME_VISIBLE, display);
         sendData(MetaIndex.ENTITY_CUSTOM_NAME_VISIBLE);
     }
@@ -732,7 +778,7 @@ public class FlagWatcher {
 
         this.glowColor = glowColor;
 
-        if (!getDisguise().isDisguiseInUse() || getDisguise().getEntity() == null) {
+        if (!getDisguise().isDisguiseInUse() || getDisguise().getEntity() == null || !getDisguise().getEntity().isValid()) {
             return;
         }
 
@@ -1022,7 +1068,11 @@ public class FlagWatcher {
 
     @Deprecated
     public <Y> void setUnsafeData(MetaIndex<Y> id, Y value) {
-        setData(id, value);
+        if (!id.getDefault().getClass().isInstance(value)) {
+            setBackupValue(id, value);
+        } else {
+            setData(id, value);
+        }
     }
 
     protected <Y> void setData(MetaIndex<Y> id, Y value) {

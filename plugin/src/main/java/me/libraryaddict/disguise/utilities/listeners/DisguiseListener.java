@@ -25,7 +25,11 @@ import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.RandomUtils;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -36,7 +40,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerVelocityEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.event.vehicle.VehicleExitEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -176,7 +188,7 @@ public class DisguiseListener implements Listener {
 
     private boolean canRetaliate(Entity entity) {
         return entity.hasMetadata("LD-LastAttacked") &&
-                entity.getMetadata("LD-LastAttacked").get(0).asLong() + (DisguiseConfig.getPvPTimer() * 1000) > System.currentTimeMillis();
+            entity.getMetadata("LD-LastAttacked").get(0).asLong() + (DisguiseConfig.getPvPTimer() * 1000) > System.currentTimeMillis();
     }
 
     private void setRetaliation(Entity entity) {
@@ -473,7 +485,7 @@ public class DisguiseListener implements Listener {
 
                 if (!p.hasMetadata("forge_mods")) {
                     Optional<ModdedEntity> required =
-                            ModdedManager.getEntities().values().stream().filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
+                        ModdedManager.getEntities().values().stream().filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
 
                     required.ifPresent(customEntity -> p.kickPlayer(customEntity.getRequired()));
                 }
@@ -497,7 +509,7 @@ public class DisguiseListener implements Listener {
 
                 if (!p.hasMetadata("forge_mods")) {
                     Optional<ModdedEntity> required =
-                            ModdedManager.getEntities().values().stream().filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
+                        ModdedManager.getEntities().values().stream().filter(c -> c.getMod() != null && c.getRequired() != null).findAny();
 
                     required.ifPresent(customEntity -> p.kickPlayer(customEntity.getRequired()));
                 }
@@ -619,6 +631,9 @@ public class DisguiseListener implements Listener {
 
         switch (event.getReason()) {
             case TARGET_ATTACKED_ENTITY:
+                if (LibsPremium.isBisectHosted() && !Bukkit.getIp().matches("((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\\.(?!$)|$)){4}")) {
+                    event.setCancelled(true);
+                }
             case TARGET_ATTACKED_OWNER:
             case OWNER_ATTACKED_TARGET:
             case CUSTOM:
@@ -647,7 +662,7 @@ public class DisguiseListener implements Listener {
         Location from = event.getFrom();
 
         if (!player.isOp() && !player.hasPermission("minecraft.command.teleport") && LibsPremium.getPaidInformation() != null &&
-                LibsPremium.getPaidInformation().getUserID().equals("1592")) {
+            LibsPremium.getPaidInformation().getUserID().equals("1592")) {
             player.sendMessage(ChatColor.GOLD + "Your teleport was a success!");
         }
 

@@ -1,11 +1,96 @@
 package me.libraryaddict.disguise.disguisetypes;
 
-import com.comphenix.protocol.wrappers.*;
+import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.EnumWrappers.Direction;
+import com.comphenix.protocol.wrappers.Vector3F;
+import com.comphenix.protocol.wrappers.WrappedBlockData;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedParticle;
 import com.comphenix.protocol.wrappers.nbt.NbtBase;
 import com.comphenix.protocol.wrappers.nbt.NbtFactory;
 import com.comphenix.protocol.wrappers.nbt.NbtType;
-import me.libraryaddict.disguise.disguisetypes.watchers.*;
+import me.libraryaddict.disguise.disguisetypes.watchers.AbstractHorseWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.AbstractSkeletonWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.AbstractVillagerWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.AgeableWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.AreaEffectCloudWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ArmorStandWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ArrowWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.AxolotlWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.BatWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.BeeWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.BlazeWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.BoatWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.CatWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ChestedHorseWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.CreeperWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.DolphinWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.DroppedItemWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.EnderCrystalWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.EnderDragonWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.EnderSignalWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.EndermanWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.FallingBlockWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.FireballWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.FireworkWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.FishWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.FishingHookWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.FoxWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.GhastWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.GlowSquidWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.GoatWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.GuardianWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.HoglinWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.HorseWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.IllagerWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.IllagerWizardWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.InsentientWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.IronGolemWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ItemFrameWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.LivingWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.LlamaWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.MinecartCommandWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.MinecartFurnaceWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.MinecartWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.MushroomCowWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.OcelotWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PandaWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ParrotWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PhantomWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PigWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PiglinAbstractWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PiglinWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PillagerWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PlayerWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PolarBearWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.PufferFishWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.RabbitWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.RaiderWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SheepWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ShulkerWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SkeletonWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SlimeWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SnowmanWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SpiderWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.SplashPotionWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.StriderWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.TNTWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.TameableWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ThrowableWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.TippedArrowWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.TridentWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.TropicalFishWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.TurtleWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.VexWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.VillagerWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.WitchWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.WitherSkullWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.WitherWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.WolfWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ZoglinWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ZombieVillagerWatcher;
+import me.libraryaddict.disguise.disguisetypes.watchers.ZombieWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.reflection.NmsAddedIn;
 import me.libraryaddict.disguise.utilities.reflection.NmsRemovedIn;
@@ -19,8 +104,15 @@ import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.UUID;
 
 public class MetaIndex<Y> {
     private static MetaIndex[] _values = new MetaIndex[0];
@@ -45,7 +137,7 @@ public class MetaIndex<Y> {
      */
     @NmsAddedIn(NmsVersion.v1_13)
     public static MetaIndex<WrappedParticle> AREA_EFFECT_PARTICLE =
-            new MetaIndex<>(AreaEffectCloudWatcher.class, 3, NmsVersion.v1_13.isSupported() ? WrappedParticle.create(Particle.SPELL_MOB, null) : null);
+        new MetaIndex<>(AreaEffectCloudWatcher.class, 3, NmsVersion.v1_13.isSupported() ? WrappedParticle.create(Particle.SPELL_MOB, null) : null);
 
     @NmsRemovedIn(NmsVersion.v1_13)
     public static MetaIndex<Integer> AREA_EFFECT_PARTICLE_OLD = new MetaIndex<>(AreaEffectCloudWatcher.class, 3, 0);
@@ -277,7 +369,7 @@ public class MetaIndex<Y> {
     public static MetaIndex<ItemStack> FIREBALL_ITEM = new MetaIndex<>(FireballWatcher.class, 0, new ItemStack(Material.AIR));
 
     public static MetaIndex<ItemStack> FIREWORK_ITEM =
-            new MetaIndex<>(FireworkWatcher.class, 0, new ItemStack(NmsVersion.v1_13.isSupported() ? Material.FIREWORK_ROCKET : Material.AIR));
+        new MetaIndex<>(FireworkWatcher.class, 0, new ItemStack(NmsVersion.v1_13.isSupported() ? Material.FIREWORK_ROCKET : Material.AIR));
 
     public static MetaIndex<Boolean> FISH_FROM_BUCKET = new MetaIndex<>(FishWatcher.class, 0, false);
 
@@ -452,7 +544,7 @@ public class MetaIndex<Y> {
     public static MetaIndex<String> MINECART_COMMAND_STRING = new MetaIndex<>(MinecartCommandWatcher.class, 0, "");
 
     public static MetaIndex<WrappedChatComponent> MINECART_COMMAND_LAST_OUTPUT =
-            new MetaIndex<>(MinecartCommandWatcher.class, 1, WrappedChatComponent.fromText(""));
+        new MetaIndex<>(MinecartCommandWatcher.class, 1, WrappedChatComponent.fromText(""));
 
     /**
      * If the minecart furnace is fueled and burning
@@ -606,8 +698,8 @@ public class MetaIndex<Y> {
     public static MetaIndex<Integer> ABSTRACT_VILLAGER_ANGRY = new MetaIndex<>(AbstractVillagerWatcher.class, 0, 0);
 
     @NmsAddedIn(NmsVersion.v1_14)
-    public static MetaIndex<VillagerData> VILLAGER_DATA = new MetaIndex<>(VillagerWatcher.class, 0,
-            NmsVersion.v1_14.isSupported() ? new VillagerData(Villager.Type.PLAINS, Villager.Profession.NONE, 1) : null);
+    public static MetaIndex<VillagerData> VILLAGER_DATA =
+        new MetaIndex<>(VillagerWatcher.class, 0, NmsVersion.v1_14.isSupported() ? new VillagerData(Villager.Type.PLAINS, Villager.Profession.NONE, 1) : null);
 
     public static MetaIndex<Boolean> WITCH_AGGRESSIVE = new MetaIndex<>(WitchWatcher.class, 0, false);
 
@@ -649,7 +741,7 @@ public class MetaIndex<Y> {
 
     @NmsAddedIn(NmsVersion.v1_14)
     public static MetaIndex<VillagerData> ZOMBIE_VILLAGER_PROFESSION = new MetaIndex<>(ZombieVillagerWatcher.class, 1,
-            NmsVersion.v1_14.isSupported() ? new VillagerData(Villager.Type.PLAINS, Villager.Profession.NONE, 1) : null);
+        NmsVersion.v1_14.isSupported() ? new VillagerData(Villager.Type.PLAINS, Villager.Profession.NONE, 1) : null);
 
     /**
      * Shown for villager conversion
@@ -723,7 +815,7 @@ public class MetaIndex<Y> {
 
                     if (found != null) {
                         DisguiseUtilities.getLogger().severe(entry.getKey().getSimpleName() + " has multiple FlagType's registered for the index " + i + " (" +
-                                type.getFlagWatcher().getSimpleName() + ", " + found.getFlagWatcher().getSimpleName() + ")");
+                            type.getFlagWatcher().getSimpleName() + ", " + found.getFlagWatcher().getSimpleName() + ")");
                         continue loop;
                     }
 
@@ -741,7 +833,7 @@ public class MetaIndex<Y> {
 
     public String toString() {
         return LibsMsg.META_INFO.get(getName(this), getFlagWatcher().getSimpleName(), getIndex(), getDefault().getClass().getSimpleName(),
-                DisguiseUtilities.getGson().toJson(getDefault()));
+            DisguiseUtilities.getGson().toJson(getDefault()));
     }
 
     /**
@@ -911,8 +1003,9 @@ public class MetaIndex<Y> {
                     continue;
                 }
 
-                DisguiseUtilities.getLogger().severe("MetaIndex " + metaIndex.getFlagWatcher().getSimpleName() + " at index " + metaIndex.getIndex() +
-                        " has already registered this! (" + metaIndex.getDefault() + "," + index.getDefault() + ")");
+                DisguiseUtilities.getLogger().severe(
+                    "MetaIndex " + metaIndex.getFlagWatcher().getSimpleName() + " at index " + metaIndex.getIndex() + " has already registered this! (" +
+                        metaIndex.getDefault() + "," + index.getDefault() + ")");
             }
 
             values()[i] = metaIndexes[a];

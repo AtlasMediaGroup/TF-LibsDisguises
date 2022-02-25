@@ -2,7 +2,6 @@ package me.libraryaddict.disguise.utilities.sounds;
 
 import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
-import me.libraryaddict.disguise.utilities.params.ParamInfoManager;
 import me.libraryaddict.disguise.utilities.reflection.ReflectionManager;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
@@ -80,7 +79,7 @@ public class SoundManager {
 
                         if (sounds == null) {
                             DisguiseUtilities.getLogger()
-                                    .warning("Sound group '" + sound + "' does not contain a category for " + type + "! Can't use as default in " + key);
+                                .warning("Sound group '" + sound + "' does not contain a category for " + type + "! Can't use as default in " + key);
                             continue;
                         }
 

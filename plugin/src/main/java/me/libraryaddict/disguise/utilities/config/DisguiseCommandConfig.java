@@ -9,9 +9,17 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginDescriptionFile;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by libraryaddict on 28/01/2021.
@@ -96,8 +104,8 @@ public class DisguiseCommandConfig {
         configString = configString.replaceAll("\n([a-zA-Z])", "\n\n$1");
 
         String s =
-                "# The following can be changed to modify how the disguise commands are registered\n# This will only work on server startup\nModifyCommands: " +
-                        modifyCommands + "\n\n" + configString;
+            "# The following can be changed to modify how the disguise commands are registered\n# This will only work on server startup\nModifyCommands: " +
+                modifyCommands + "\n\n" + configString;
 
         commandConfig.delete();
 

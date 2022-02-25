@@ -156,6 +156,8 @@ public class PacketListenerSounds extends PacketAdapter {
             newModifs.write(2, mods.read(2));
             newModifs.write(3, mods.read(3));
             newModifs.write(4, mods.read(4));
+
+            mods = newModifs;
         } else {
             newPacket = event.getPacket().shallowClone();
             mods = newPacket.getModifier();
@@ -237,7 +239,7 @@ public class PacketListenerSounds extends PacketAdapter {
 
         Location loc = entity.getLocation();
         PacketContainer packet =
-                new PacketContainer(sound.getClass().getSimpleName().equals("MinecraftKey") ? Server.CUSTOM_SOUND_EFFECT : Server.NAMED_SOUND_EFFECT);
+            new PacketContainer(sound.getClass().getSimpleName().equals("MinecraftKey") ? Server.CUSTOM_SOUND_EFFECT : Server.NAMED_SOUND_EFFECT);
 
         mods = packet.getModifier();
 

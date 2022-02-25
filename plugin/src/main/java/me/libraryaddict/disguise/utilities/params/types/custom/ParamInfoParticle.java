@@ -23,8 +23,7 @@ import java.util.Set;
 public class ParamInfoParticle extends ParamInfoEnum {
     private Material[] materials;
 
-    public ParamInfoParticle(Class paramClass, String name, String description, Enum[] possibleValues,
-            Material[] materials) {
+    public ParamInfoParticle(Class paramClass, String name, String description, Enum[] possibleValues, Material[] materials) {
         super(paramClass, name, description, possibleValues);
 
         this.materials = materials;
@@ -74,8 +73,7 @@ public class ParamInfoParticle extends ParamInfoEnum {
 
                 returns += "," + ((WrappedBlockData) data).getType().name();
             } else if (data instanceof Particle.DustOptions) {
-                returns += "," +
-                        ParamInfoManager.getParamInfo(Color.class).toString(((Particle.DustOptions) data).getColor());
+                returns += "," + ParamInfoManager.getParamInfo(Color.class).toString(((Particle.DustOptions) data).getColor());
 
                 if (((Particle.DustOptions) data).getSize() != 1f) {
                     returns += "," + ((Particle.DustOptions) data).getSize();
@@ -129,7 +127,7 @@ public class ParamInfoParticle extends ParamInfoEnum {
                 }
 
                 Color color = ((ParamInfoColor) ParamInfoManager.getParamInfo(Color.class)).parseToColor(
-                        StringUtils.join(Arrays.copyOfRange(split, 1, split.length - (split.length % 2)), ","));
+                    StringUtils.join(Arrays.copyOfRange(split, 1, split.length - (split.length % 2)), ","));
 
                 if (color == null) {
                     throw new DisguiseParseException(LibsMsg.PARSE_PARTICLE_REDSTONE, particle.name(), string);
@@ -143,6 +141,11 @@ public class ParamInfoParticle extends ParamInfoEnum {
                     throw new DisguiseParseException(LibsMsg.PARSE_PARTICLE_REDSTONE, particle.name(), string);
                 } else {
                     size = Math.max(0.2f, Float.parseFloat(split[split.length - 1]));
+
+                    // Stupid high cap
+                    if (size > 100) {
+                        size = 100;
+                    }
                 }
 
                 data = new Particle.DustOptions(color, size);

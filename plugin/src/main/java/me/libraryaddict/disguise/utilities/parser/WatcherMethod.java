@@ -23,6 +23,6 @@ public class WatcherMethod {
     @Override
     public String toString() {
         return "WatcherMethod{" + "watcherClass=" + watcherClass + ", method=" + method + ", name='" + name + '\'' + ", returnType=" + returnType + ", param=" +
-                param + ", randomDefault=" + randomDefault + ", hideFromTab=" + hideFromTab + '}';
+            param + ", randomDefault=" + randomDefault + ", hideFromTab=" + hideFromTab + '}';
     }
 }

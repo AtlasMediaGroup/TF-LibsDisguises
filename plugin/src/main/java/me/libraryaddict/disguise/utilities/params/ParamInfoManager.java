@@ -1,5 +1,6 @@
 package me.libraryaddict.disguise.utilities.params;
 
+import javax.annotation.Nullable;
 import lombok.Getter;
 import me.libraryaddict.disguise.disguisetypes.DisguiseType;
 import me.libraryaddict.disguise.disguisetypes.FlagWatcher;
@@ -14,7 +15,6 @@ import me.libraryaddict.disguise.utilities.watchers.DisguiseMethods;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

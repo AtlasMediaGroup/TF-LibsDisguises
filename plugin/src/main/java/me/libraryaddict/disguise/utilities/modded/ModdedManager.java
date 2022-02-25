@@ -37,8 +37,7 @@ public class ModdedManager {
     @Getter
     private static byte[] fmlRegistries;
     @Getter
-    private static final Cache<String, ArrayList<String>> forgeMods = CacheBuilder.newBuilder()
-            .expireAfterWrite(1, TimeUnit.MINUTES).build();
+    private static final Cache<String, ArrayList<String>> forgeMods = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES).build();
 
     public ModdedManager(ArrayList<String> channels) {
         if (getEntities().isEmpty()) {
@@ -81,8 +80,7 @@ public class ModdedManager {
 
             // Only this one thx
             // s.serializeString(output, "minecraft:entity_type");
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -124,8 +122,7 @@ public class ModdedManager {
 
             // Or dummied. What is dummied anyways. What are these others?
             s.serializeVarInt(output, 0);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -203,9 +200,7 @@ public class ModdedManager {
         ArrayList<DisguisePerm> perms = new ArrayList<>();
 
         for (Map.Entry<NamespacedKey, ModdedEntity> entry : entities.entrySet()) {
-            perms.add(new DisguisePerm(
-                    entry.getValue().isLiving() ? DisguiseType.MODDED_LIVING : DisguiseType.MODDED_MISC,
-                    entry.getValue().getName()));
+            perms.add(new DisguisePerm(entry.getValue().isLiving() ? DisguiseType.MODDED_LIVING : DisguiseType.MODDED_MISC, entry.getValue().getName()));
         }
 
         return perms;

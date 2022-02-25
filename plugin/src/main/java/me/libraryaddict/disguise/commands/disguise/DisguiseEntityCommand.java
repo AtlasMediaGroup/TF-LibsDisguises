@@ -1,6 +1,5 @@
 package me.libraryaddict.disguise.commands.disguise;
 
-import me.libraryaddict.disguise.BlockedDisguises;
 import me.libraryaddict.disguise.DisguiseConfig;
 import me.libraryaddict.disguise.LibsDisguises;
 import me.libraryaddict.disguise.commands.DisguiseBaseCommand;
@@ -12,7 +11,6 @@ import me.libraryaddict.disguise.utilities.parser.DisguiseParser;
 import me.libraryaddict.disguise.utilities.parser.DisguisePermissions;
 import me.libraryaddict.disguise.utilities.translations.LibsMsg;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -61,26 +59,10 @@ public class DisguiseEntityCommand extends DisguiseBaseCommand implements TabCom
             return true;
         }
 
-        if (!BlockedDisguises.disabled)
-        {
-            if (BlockedDisguises.isAllowed(testDisguise))
-            {
-                LibsDisguises.getInstance().getListener()
-                        .addInteraction(sender.getName(), new DisguiseEntityInteraction(disguiseArgs), DisguiseConfig.getDisguiseEntityExpire());
+        LibsDisguises.getInstance().getListener()
+            .addInteraction(sender.getName(), new DisguiseEntityInteraction(disguiseArgs), DisguiseConfig.getDisguiseEntityExpire());
 
-                LibsMsg.DISG_ENT_CLICK.send(sender, DisguiseConfig.getDisguiseEntityExpire(), testDisguise.getDisguiseName());
-            }
-            else
-            {
-                sender.sendMessage(ChatColor.RED + "That disguise is forbidden.");
-                return true;
-            }
-        }
-        else
-        {
-            sender.sendMessage(ChatColor.RED + "Disguises are disabled.");
-            return true;
-        }
+        LibsMsg.DISG_ENT_CLICK.send(sender, DisguiseConfig.getDisguiseEntityExpire(), testDisguise.getDisguiseName());
         return true;
     }
 

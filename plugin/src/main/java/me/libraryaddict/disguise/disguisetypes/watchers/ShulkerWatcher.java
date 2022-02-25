@@ -42,11 +42,13 @@ public class ShulkerWatcher extends InsentientWatcher {
     }
 
     public void setShieldHeight(int newHeight) {
-        if (newHeight < 0)
+        if (newHeight < 0) {
             newHeight = 0;
+        }
 
-        if (newHeight > 127)
+        if (newHeight > 127) {
             newHeight = 127;
+        }
 
         setData(MetaIndex.SHULKER_PEEKING, (byte) newHeight);
         sendData(MetaIndex.SHULKER_PEEKING);

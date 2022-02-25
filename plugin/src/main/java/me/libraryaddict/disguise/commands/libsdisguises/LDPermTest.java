@@ -66,8 +66,7 @@ public class LDPermTest implements LDCommand {
             LibsMsg.NORMAL_PERM_CHECK_FAIL.send(sender);
         }
 
-        if (player.hasPermission("libsdisguises.disguise.zombie") ||
-                permissions.isAllowedDisguise(new DisguisePerm(DisguiseType.ZOMBIE))) {
+        if (player.hasPermission("libsdisguises.disguise.zombie") || permissions.isAllowedDisguise(new DisguisePerm(DisguiseType.ZOMBIE))) {
             LibsMsg.LIBS_PERM_CHECK_ZOMBIE_PERMISSIONS.send(sender);
         }
 

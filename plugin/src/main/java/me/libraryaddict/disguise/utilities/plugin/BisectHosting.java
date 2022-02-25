@@ -31,8 +31,7 @@ public class BisectHosting {
                 if (ip.startsWith("https://www.bisecthosting.com/")) {
                     hostedBy = true;
                 }
-            }
-            catch (IOException ignored) {
+            } catch (IOException ignored) {
             }
         }
 
@@ -57,8 +56,7 @@ public class BisectHosting {
         con.connect();
         con.getInputStream();
 
-        if (con.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM ||
-                con.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP) {
+        if (con.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM || con.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP) {
             return con.getHeaderField("Location");
         }
 

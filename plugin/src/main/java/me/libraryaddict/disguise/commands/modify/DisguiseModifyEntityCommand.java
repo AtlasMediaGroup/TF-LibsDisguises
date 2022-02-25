@@ -40,8 +40,8 @@ public class DisguiseModifyEntityCommand extends DisguiseBaseCommand implements 
 
         // TODO Validate if any disguises have this arg
 
-        LibsDisguises.getInstance().getListener().addInteraction(sender.getName(),
-                new DisguiseModifyInteraction(DisguiseUtilities.split(StringUtils.join(args, " "))),
+        LibsDisguises.getInstance().getListener()
+            .addInteraction(sender.getName(), new DisguiseModifyInteraction(DisguiseUtilities.split(StringUtils.join(args, " "))),
                 DisguiseConfig.getDisguiseEntityExpire());
 
         LibsMsg.DMODIFYENT_CLICK.send(sender, DisguiseConfig.getDisguiseEntityExpire());
@@ -79,7 +79,6 @@ public class DisguiseModifyEntityCommand extends DisguiseBaseCommand implements 
         ArrayList<String> allowedDisguises = getAllowedDisguises(permissions);
 
         LibsMsg.DMODENT_HELP1.send(sender);
-        LibsMsg.DMODIFY_HELP3.send(sender,
-                StringUtils.join(allowedDisguises, LibsMsg.CAN_USE_DISGS_SEPERATOR.get()));
+        LibsMsg.DMODIFY_HELP3.send(sender, StringUtils.join(allowedDisguises, LibsMsg.CAN_USE_DISGS_SEPERATOR.get()));
     }
 }
