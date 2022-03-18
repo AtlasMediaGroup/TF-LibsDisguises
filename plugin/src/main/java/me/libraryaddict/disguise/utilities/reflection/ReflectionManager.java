@@ -41,6 +41,8 @@ import me.libraryaddict.disguise.disguisetypes.watchers.ZombieWatcher;
 import me.libraryaddict.disguise.utilities.DisguiseUtilities;
 import me.libraryaddict.disguise.utilities.DisguiseValues;
 import me.libraryaddict.disguise.utilities.LibsPremium;
+import me.libraryaddict.disguise.utilities.reflection.annotations.NmsAddedIn;
+import me.libraryaddict.disguise.utilities.reflection.annotations.NmsRemovedIn;
 import me.libraryaddict.disguise.utilities.sounds.SoundGroup;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -758,7 +760,17 @@ public class ReflectionManager {
 
     public static ReflectionManagerAbstract getReflectionManager(NmsVersion nmsVersion) {
         try {
-            Class<?> aClass = Class.forName("me.libraryaddict.disguise.utilities.reflection." + nmsVersion.name() + ".ReflectionManager");
+            String versionName = nmsVersion.name();
+
+            if (nmsVersion == NmsVersion.v1_18) {
+                if (Bukkit.getVersion().contains("1.18.1")) {
+                    versionName += "_1";
+                } else {
+                    versionName += "_2";
+                }
+            }
+
+            Class<?> aClass = Class.forName("me.libraryaddict.disguise.utilities.reflection." + versionName + ".ReflectionManager");
             Object o = aClass.getConstructor().newInstance();
 
             return (ReflectionManagerAbstract) o;

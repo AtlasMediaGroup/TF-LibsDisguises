@@ -226,6 +226,8 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
 
                         tabs.add(value);
                     }
+                } else {
+                    tabs.addAll(wantToUse);
                 }
             }
         }
@@ -233,7 +235,7 @@ public abstract class DisguiseBaseCommand implements CommandExecutor {
         if (addMethods) {
             // If this is a method, add. Else if it can be a param of the previous argument, add.
             for (WatcherMethod method : ParamInfoManager.getDisguiseWatcherMethods(disguisePerm.getWatcherClass())) {
-                if (!perms.isAllowedDisguise(disguisePerm, Collections.singletonList(method.getName()))) {
+                if (!perms.isAllowedDisguise(disguisePerm, Collections.singletonList(method.getName())) || !method.isUsable(disguisePerm.getType())) {
                     continue;
                 }
 
