@@ -552,7 +552,7 @@ public class DisguiseUtilities {
         }
 
         // If you're on 1.18..
-        return new String[]{"4.8.0", "538"};
+        return new String[]{"4.8.0"};
     }
 
     public static boolean isProtocolLibOutdated() {
@@ -2292,6 +2292,8 @@ public class DisguiseUtilities {
         return list.toArray(new String[0]);
     }*/
     public static String quote(String string) {
+        string = string.replace("\n", "\\n");
+
         if (!string.isEmpty() && !string.contains(" ") && !string.startsWith("\"") && !string.endsWith("\"")) {
             return string;
         }
